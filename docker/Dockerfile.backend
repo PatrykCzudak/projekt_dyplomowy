@@ -1,26 +1,23 @@
-# Użyj oficjalnego obrazu Pythona (slim dla mniejszego rozmiaru)
+# docker/Dockerfile.backend
 FROM python:3.11-slim
 
-# Instalacja narzędzia uv (Astral) w obrazie
 RUN pip install --no-cache-dir uv
 
-# Ustaw katalog roboczy w kontenerze
 WORKDIR /app
 
-# Skopiuj pliki konfiguracyjne uv do obrazu (pyproject.toml i uv.lock)
-COPY ../pyproject.toml ../uv.lock ./
+# pliki konfiguracyjne projektu
+COPY pyproject.toml uv.lock ./
 
-# Zainstaluj zależności w środowisku (uv tworzy .venv z zainstalowanymi pakietami)
+# instalacja zależności do .venv
 RUN uv sync --frozen
 
-# Skopiuj kod aplikacji do obrazu
-COPY ../backend/app ./app
+# kod aplikacji
+COPY backend/app ./app
 
-# Ustaw zmienną środowiskową, aby domyślne .venv było w PATH
+# udostępniamy .venv w $PATH
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Wystaw port 8000 (dla FastAPI/Uvicorn)
 EXPOSE 8000
 
-# Uruchom aplikację FastAPI przy starcie kontenera (serwer Uvicorn na porcie 8000)
-CMD ["sh", "-c", "python -m app.db.init_db && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# init_db + serwer
+CMD ["sh", "-c", "python -m app.db.init_db && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]

@@ -1,7 +1,8 @@
 import time
 import sqlalchemy
 from sqlalchemy.exc import OperationalError
-from app.db.database import engine, Base  
+from app.db.database import engine, Base
+from app.models import models  # <-- Ważne, żeby modele zostały zaimportowane
 
 def table_exists(table_name):
     inspector = sqlalchemy.inspect(engine)
@@ -11,11 +12,14 @@ def init():
     retries = 10
     while retries > 0:
         try:
-            if not table_exists("assets"):
-                print("Tworzenie bazy danych...")
-                Base.metadata.create_all(bind=engine)
-            else:
-                print("Baza danych już istnieje.")
+            print("Sprawdzam połączenie z bazą danych...")
+            # próba inspekcji (czy baza gotowa)
+            if table_exists("assets"):
+                print("Usuwam istniejące tabele...")
+                Base.metadata.drop_all(bind=engine)
+            print("Tworzę nowe tabele...")
+            Base.metadata.create_all(bind=engine)
+            print("Baza danych została odświeżona.")
             break
         except OperationalError as e:
             print(f"Baza jeszcze się nie uruchomiła, ponawiam... ({10 - retries + 1})")

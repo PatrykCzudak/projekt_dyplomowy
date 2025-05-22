@@ -4,6 +4,7 @@ import Portfolio from './pages/Portfolio';
 import Transactions from './pages/Transactions';
 import Prices from './pages/Prices';
 import Risk from './pages/Risk';
+import AssetRisk from './pages/AssetRisk';
 import Ideas from './pages/Ideas';
 import HistoricalChart from './pages/Chart';
 
@@ -17,6 +18,7 @@ function App() {
         <Route path="chart" element={<HistoricalChart />} />
         <Route path="prices" element={<Prices />} />
         <Route path="risk" element={<Risk />} />
+        <Route path="/risk/asset" element={<AssetRisk />} />
         <Route path="ideas" element={<Ideas />} />
       </Route>
     </Routes>
