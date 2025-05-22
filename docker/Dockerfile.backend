@@ -1,0 +1,26 @@
+# Użyj oficjalnego obrazu Pythona (slim dla mniejszego rozmiaru)
+FROM python:3.11-slim
+
+# Instalacja narzędzia uv (Astral) w obrazie
+RUN pip install --no-cache-dir uv
+
+# Ustaw katalog roboczy w kontenerze
+WORKDIR /app
+
+# Skopiuj pliki konfiguracyjne uv do obrazu (pyproject.toml i uv.lock)
+COPY ../pyproject.toml ../uv.lock ./
+
+# Zainstaluj zależności w środowisku (uv tworzy .venv z zainstalowanymi pakietami)
+RUN uv sync --frozen
+
+# Skopiuj kod aplikacji do obrazu
+COPY ../backend/app ./app
+
+# Ustaw zmienną środowiskową, aby domyślne .venv było w PATH
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Wystaw port 8000 (dla FastAPI/Uvicorn)
+EXPOSE 8000
+
+# Uruchom aplikację FastAPI przy starcie kontenera (serwer Uvicorn na porcie 8000)
+CMD ["sh", "-c", "python -m app.db.init_db && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

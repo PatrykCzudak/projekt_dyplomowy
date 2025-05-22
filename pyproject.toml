@@ -1,12 +1,13 @@
 [project]
-name = "backend"
+name = "projekt-dyplomowy"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.12",
-    "pandas>=2.2.3",
-    "pre-commit>=4.2.0",
-    "uvicorn>=0.34.2",
+    "psycopg2-binary>=2.9.10",
+    "sqlalchemy>=2.0.41",
+    "uvicorn[standard]>=0.34.2",
+    "yfinance>=0.2.61",
 ]
