@@ -29,7 +29,7 @@ Frontend (React + Tailwind CSS + ApexCharts)
  - Obsługa błędów po stronie backendu i frontend
  - Estetyczne dopracowanie UI (np. animacje, kolory, przejścia)
  - Responsywność (dostosowanie do mobile)
- - Autoryzacja / zarządzanie kontami użytkowników (jeśli planowane)
+ - Autoryzacja / zarządzanie kontami użytkowników
  - Większa kontrola nad wyborem zakresu dat (na frontendzie)
  - Utrwalanie wyników analizy ryzyka (np. do bazy danych)
  - Jednostkowe testy backendu (Pytest)
