@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import argparse
@@ -8,6 +9,7 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from tensorflow.keras import Sequential
@@ -16,19 +18,50 @@ from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.utils import to_categorical
 
 # ────────────────────────────────────────────────────────────────────────────────
+# GPU CONFIG
+# ────────────────────────────────────────────────────────────────────────────────
+
+def configure_gpu(force_device: str = "AUTO") -> None:
+    """Wykryj i ustaw GPU (lub CPU).
+
+    Parameters
+    ----------
+    force_device: "CPU", "GPU" lub "AUTO".
+    """
+
+    gpus = tf.config.list_physical_devices("GPU")
+    if force_device.upper() == "CPU":
+        tf.config.set_visible_devices([], "GPU")
+        print("[INFO] Wymuszono trenowanie na CPU")
+        return
+
+    if force_device.upper() == "GPU":
+        if not gpus:
+            print("[WARN] Brak dostępnych GPU – przełączam na CPU")
+            return
+    # AUTO – użyj GPU jeśli jest
+    if gpus:
+        try:
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+            print(f"[INFO] Wykryto {len(gpus)} GPU, memory growth włączony")
+        except RuntimeError as e:
+            print("[WARN] Nie udało się skonfigurować GPU:", e)
+    else:
+        print("[INFO] GPU nie znaleziono, trening na CPU")
+
+# ────────────────────────────────────────────────────────────────────────────────
 # FEATURE ENGINEERING & LABELING
 # ────────────────────────────────────────────────────────────────────────────────
 
 def build_feature_df(csv_dir: Path | str = "data", min_len: int = 250) -> pd.DataFrame:
-    """Wczytaj wszystkie pliki CSV w katalogu i zbuduj DataFrame z cechami + label."""
-
     csv_dir = Path(csv_dir)
     frames = []
 
     for csv_file in csv_dir.glob("*.csv"):
         df = pd.read_csv(csv_file, parse_dates=["Date"])
         if len(df) < min_len:
-            continue  # pomijamy zbyt krótkie historie
+            continue
 
         df.sort_values("Date", inplace=True)
         df["return"] = df["Close"].pct_change()
@@ -37,28 +70,23 @@ def build_feature_df(csv_dir: Path | str = "data", min_len: int = 250) -> pd.Dat
         df["ma20"] = df["return"].rolling(20).mean()
         df["hv20"] = df["return"].rolling(20).std() * math.sqrt(252)
 
-        # etykieta ryzyka
-        df["risk_label"] = pd.cut(
-            df["hv20"],
-            bins=[-np.inf, 0.20, 0.40, np.inf],
-            labels=[0, 1, 2],
-        ).astype(int)
+        # Kategorie ryzyka → kody: -1 (NaN) / 0 / 1 / 2
+        risk_cat = pd.cut(df["hv20"], [-np.inf, 0.20, 0.40, np.inf])
+        df["risk_label"] = risk_cat.cat.codes  # -1 tam, gdzie hv20 = NaN
 
-        # zachowujemy tylko potrzebne kolumny; usuwamy początkowe NaN‑y
         feature_cols = ["return", "abs_return", "ma5", "ma20", "hv20"]
-        frames.append(df.dropna(subset=feature_cols + ["risk_label"])[feature_cols + ["risk_label"]])
+        clean_df = df[df["risk_label"] != -1].dropna(subset=feature_cols)
+        frames.append(clean_df[feature_cols + ["risk_label"]])
 
     if not frames:
-        raise RuntimeError("Brak danych wejściowych spełniających kryteria – uruchom yahoo_pipeline.py lub sprawdź ścieżkę.")
+        raise RuntimeError("Brak danych wejściowych spełniających kryteria – sprawdź katalog CSV lub uruchom pipeline.")
 
     return pd.concat(frames, ignore_index=True)
 
 
 def prepare_dataset(df: pd.DataFrame, test_size: float = 0.2, random_state: int = 42) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, StandardScaler]:
-    """Podziel na train/test i przeskaluj cechy."""
-
     X = df.drop("risk_label", axis=1).values
-    y = df["risk_label"].values
+    y = df["risk_label"].values.astype(int)
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=test_size, random_state=random_state, stratify=y
@@ -68,7 +96,6 @@ def prepare_dataset(df: pd.DataFrame, test_size: float = 0.2, random_state: int 
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
 
-    # one‑hot encoding labeli (3 klasy)
     y_train_cat = to_categorical(y_train, num_classes=3)
     y_test_cat = to_categorical(y_test, num_classes=3)
 
@@ -87,11 +114,7 @@ def build_model(input_dim: int) -> Sequential:
         Dense(3, activation="softmax"),
     ])
 
-    model.compile(
-        optimizer="adam",
-        loss="categorical_crossentropy",
-        metrics=["accuracy"],
-    )
+    model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
     return model
 
 # ────────────────────────────────────────────────────────────────────────────────
@@ -105,14 +128,17 @@ def train_and_evaluate(
     patience: int = 5,
     model_out: str | Path = "risk_model.h5",
     scaler_out: str | Path = "scaler.pkl",
+    device: str = "AUTO",
 ) -> None:
+    configure_gpu(device)
+
     df = build_feature_df(csv_dir)
     X_train, X_test, y_train, y_test, scaler = prepare_dataset(df)
 
     model = build_model(X_train.shape[1])
 
     es = EarlyStopping(monitor="val_loss", patience=patience, restore_best_weights=True)
-    history = model.fit(
+    model.fit(
         X_train,
         y_train,
         validation_split=0.2,
@@ -136,11 +162,12 @@ def train_and_evaluate(
 # ────────────────────────────────────────────────────────────────────────────────
 
 def cli():
-    parser = argparse.ArgumentParser(description="Klasyfikacja ryzyka akcji (NN)")
+    parser = argparse.ArgumentParser(description="Klasyfikacja ryzyka akcji (NN, GPU-ready)")
     parser.add_argument("--csv_dir", default="data", help="Katalog z plikami CSV od pipeline'u")
-    parser.add_argument("--epochs", type=int, default=30, help="Liczba epok treningu")
-    parser.add_argument("--batch", type=int, default=256, help="Batch size")
-    parser.add_argument("--patience", type=int, default=5, help="Early stopping patience")
+    parser.add_argument("--epochs", type=int, default=30)
+    parser.add_argument("--batch", type=int, default=256)
+    parser.add_argument("--patience", type=int, default=5)
+    parser.add_argument("--device", choices=["CPU", "GPU", "AUTO"], default="AUTO", help="Wymuś urządzenie obliczeniowe")
     args = parser.parse_args()
 
     train_and_evaluate(
@@ -148,6 +175,7 @@ def cli():
         epochs=args.epochs,
         batch_size=args.batch,
         patience=args.patience,
+        device=args.device,
     )
 
 if __name__ == "__main__":
