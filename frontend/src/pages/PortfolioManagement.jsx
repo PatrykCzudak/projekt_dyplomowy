@@ -18,7 +18,7 @@ export default function PortfolioManagement() {
 
       <div className="flex flex-col md:flex-row gap-6">
         {/*Wykres*/}
-        <div className="md:w-1/2 bg-surface rounded-lg shadow p-4">
+        <div className="md:w-2/3 bg-surface rounded-lg shadow p-4">
           <HistoricalChart
             symbol={selectedAsset}
             onSelectSymbol={setSelectedAsset}
@@ -26,7 +26,7 @@ export default function PortfolioManagement() {
         </div>
 
         {/*Formularz transakcji*/}
-        <div className="md:w-1/2 bg-surface rounded-lg shadow p-4">
+        <div className="md:w-1/3 bg-surface rounded-lg shadow p-4">
           <TransactionForm
             defaultSymbol={selectedAsset}
             onTransactionAdded={handleTransactionAdded}

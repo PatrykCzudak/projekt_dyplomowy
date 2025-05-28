@@ -47,10 +47,10 @@ export default function Sidebar() {
           </NavLink>
         </li>
         <li>
-          <NavLink to="/ideas" className={({ isActive }) => 
+          <NavLink to="/optimize" className={({ isActive }) => 
             `${baseClasses} ${isActive ? activeClasses : inactiveClasses}`
           }>
-            <Lightbulb className="w-4 h-4 mr-2" /> Ideas
+            <Lightbulb className="w-4 h-4 mr-2" /> Portfolio Optimization 
           </NavLink>
         </li>
       </ul>

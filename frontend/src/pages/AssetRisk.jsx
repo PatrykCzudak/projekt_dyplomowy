@@ -1,60 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { api } from '../services/api';
 import Chart from 'react-apexcharts';
 
-export default function AssetRisk() {
+const AssetRisk = forwardRef((props, ref) => {
   const [symbol, setSymbol] = useState('');
   const [analyses, setAnalyses] = useState([]);
+  const [expanded, setExpanded] = useState({});
 
-  const addAnalysis = (type) => {
+  const addAnalysis = (mode) => {
     const id = Date.now();
-    const newAnalysis = { id, type, symbol, data: null, show: false };
-    setAnalyses(prev => [...prev, newAnalysis]);
+    setAnalyses(prev => [...prev, { id, mode, symbol, data: null, error: false }]);
 
-    const url = type === "Classical"
+    const url = mode === 'Classical'
       ? `/risk/asset/${symbol}/classical`
       : `/risk/asset/${symbol}/ai`;
 
     api.get(url)
       .then(res => {
-        console.log(`[DEBUG] Response for ${type}:`, res.data);
         setAnalyses(prev =>
           prev.map(a => a.id === id ? { ...a, data: res.data } : a)
         );
       })
       .catch(() => {
         setAnalyses(prev =>
-          prev.map(a => a.id === id ? { ...a, data: { error: "Failed to fetch data" } } : a)
+          prev.map(a => a.id === id ? { ...a, error: true } : a)
         );
       });
   };
 
-  const renderChart = (an) => {
-    const chartOptions = {
-      chart: { id: `chart-${an.id}` },
-      xaxis: {
-        categories: an.type === "Classical"
-          ? ["VaR Parametric", "VaR Historical", "Expected Shortfall"]
-          : ["Prediction"]
-      }
-    };
+  useImperativeHandle(
+    ref,
+    () => ({ addAnalysis }),
+    [addAnalysis]
+  );
 
-    const chartData = an.type === "Classical"
-      ? [
-          an.data?.VaR_parametric ?? 0,
-          an.data?.VaR_historical ?? 0,
-          an.data?.Expected_Shortfall ?? 0
-        ]
-      : [an.data?.risk_prediction ?? 0];
-
-    return (
-      <Chart
-        options={chartOptions}
-        series={[{ name: "Value", data: chartData }]}
-        type="bar"
-        height={300}
-      />
-    );
+  const toggle = id => {
+    setExpanded(e => ({ ...e, [id]: !e[id] }));
   };
 
   return (
@@ -62,51 +43,101 @@ export default function AssetRisk() {
       <input
         type="text"
         value={symbol}
-        onChange={(e) => setSymbol(e.target.value)}
-        placeholder="Enter symbol (e.g. AAPL)"
-        className="mb-4 p-2 border border-gray-600 rounded bg-gray-900 text-white"
+        onChange={e => setSymbol(e.target.value.toUpperCase())}
+        placeholder="Symbol (e.g. AAPL)"
+        className="mb-4 w-32 px-2 py-1 border border-gray-600 rounded bg-gray-900 text-white"
       />
-      <button onClick={() => addAnalysis("Classical")} className="mr-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Add Classical</button>
-      <button onClick={() => addAnalysis("AI")} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Add AI</button>
 
-      {analyses.map(an => (
-        <div key={an.id} className="my-4 p-4 bg-gray-800 rounded">
-          <h3 className="text-lg font-semibold mb-2">{an.type} Analysis - {an.symbol.toUpperCase()}</h3>
-          {an.data ? (
-            an.data.error ? (
-              <p className="text-red-400">{an.data.error}</p>
-            ) : (
-              <>
-                {an.type === "Classical" ? (
-                  <div>
-                    <p>VaR Param: {(an.data.VaR_parametric ?? 0).toFixed(4)}</p>
-                    <p>VaR Hist: {(an.data.VaR_historical ?? 0).toFixed(4)}</p>
-                    <p>Expected Shortfall: {(an.data.Expected_Shortfall ?? 0).toFixed(4)}</p>
-                  </div>
-                ) : (
-                  <div>
-                    <p>Risk Category: {an.data.risk_category}</p>
-                    <p>Prediction: {(an.data.risk_prediction ?? 0).toFixed(4)}</p>
-                  </div>
-                )}
-                <button
-                  onClick={() =>
-                    setAnalyses(prev =>
-                      prev.map(a => a.id === an.id ? { ...a, show: !a.show } : a)
-                    )
-                  }
-                  className="mt-2 text-sm text-blue-300 hover:underline"
-                >
-                  {an.show ? "Hide" : "Show"} Details
-                </button>
-                {an.show && renderChart(an)}
-              </>
-            )
+      {analyses.map(a => (
+        <div key={a.id} className="my-4 p-4 bg-gray-800 rounded">
+          <h3 className="text-lg font-semibold mb-2">
+            {a.mode === 'Classical'
+              ? 'Classical Asset Analysis'
+              : 'AI Asset Analysis'} – {a.symbol}
+          </h3>
+
+          {a.error ? (
+            <p className="text-red-400">Failed to fetch data</p>
+          ) : a.data ? (
+            <>
+              {a.mode === 'Classical' ? (
+                <div className="mb-4 space-y-1 text-gray-200">
+                  <p>VaR Parametric: {a.data.VaR_parametric.toFixed(4)}</p>
+                  <p>VaR Historical: {a.data.VaR_historical.toFixed(4)}</p>
+                  <p>Expected Shortfall: {a.data.Expected_Shortfall.toFixed(4)}</p>
+                  <button
+                    onClick={() => toggle(a.id)}
+                    className="
+                      inline-flex items-center justify-center
+                      text-xs font-semibold
+                      bg-primary text-white
+                      px-3 py-1
+                      rounded-full
+                      hover:bg-primary-light
+                      focus:outline-none focus:ring-2 focus:ring-primary/50
+                      transition
+                    "
+                  >
+                    {expanded[a.id] ? 'Hide details' : 'Show more'}
+                  </button>                
+                </div>
+              ) : (
+                <div className="mb-4 space-y-1 text-gray-200">
+                  <p>Risk Category: {a.data.risk_category}</p>
+                  <p>Prediction: {a.data.risk_prediction.toFixed(4)}</p>
+                  <button
+                    onClick={() => toggle(a.id)}
+                    className="
+                      inline-flex items-center justify-center
+                      text-xs font-semibold
+                      bg-primary text-white
+                      px-3 py-1
+                      rounded-full
+                      hover:bg-primary-light
+                      focus:outline-none focus:ring-2 focus:ring-primary/50
+                      transition
+                    "
+                  >
+                    {expanded[a.id] ? 'Hide details' : 'Show more'}
+                  </button>                
+                </div>
+              )}
+              {expanded[a.id] && (
+                <Chart
+                  options={{
+                    chart: { id: `asset-risk-${a.id}` },
+                    xaxis: {
+                      categories: a.mode === 'Classical'
+                        ? ['VaR Parametric','VaR Historical','Expected Shortfall']
+                        : ['Prediction']
+                    },
+                    theme: { mode: 'dark' },
+                    stroke: { curve: 'smooth' },
+                    yaxis: { labels: { style: { colors: '#ccc' } } },
+                    grid: { borderColor: '#333' }
+                  }}
+                  series={[{
+                    name: 'Value',
+                    data: a.mode === 'Classical'
+                      ? [
+                          a.data.VaR_parametric,
+                          a.data.VaR_historical,
+                          a.data.Expected_Shortfall
+                        ]
+                      : [a.data.risk_prediction]
+                  }]}
+                  type="bar"
+                  height={300}
+                />
+              )}
+            </>
           ) : (
-            <p className="text-gray-400">Loading...</p>
+            <p className="text-gray-400">Loading…</p>
           )}
         </div>
       ))}
     </div>
   );
-}
+});
+
+export default AssetRisk;

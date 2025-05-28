@@ -35,13 +35,13 @@ export default function ChartPage() {
   }, [symbol, period, chartType]);
 
   const options = {
-    chart: {
-      type: chartType,
-      toolbar: { show: true },
-    },
+    chart: { type: chartType, toolbar: { show: true } },
+    theme: { mode: 'dark' },
+    stroke: { curve: 'smooth' },
+    grid: { borderColor: '#333' },
     xaxis: {
-      type: 'category',        
-      tickAmount: 8, 
+      type: 'category',
+      tickAmount: 8,
       labels: {
         style: { colors: '#ccc' },
         rotate: -45,
@@ -49,23 +49,17 @@ export default function ChartPage() {
         rotateAlways: true,
         formatter: value => {
           const d = new Date(value);
-          const day = String(d.getDate()).padStart(2, '0');
-          const month = String(d.getMonth() + 1).padStart(2, '0');
-          return `${day}/${month}`;
+          return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
         }
       },
-      axisTicks: { show: true },
+      axisTicks: { show: false },
+      axisBorder: { show: false }
     },
-    yaxis: {
-      labels: { style: { colors: '#ccc' } },
-    },
-    theme: { mode: 'dark' },
-    stroke: { curve: 'smooth' },
-    grid: { borderColor: '#333' },
+    yaxis: { labels: { style: { colors: '#ccc' } } },
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-800 p-4">
+    <div className="bg-gray-800 p-4">
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-4 mb-4">
         <input
@@ -97,8 +91,8 @@ export default function ChartPage() {
         </select>
       </div>
 
-      {/* Chart area fills remaining space */}
-      <div className="flex-1 w-full bg-gray-900 rounded shadow overflow-hidden">
+      {/* Chart container*/}
+      <div className="w-full h-96 bg-gray-900 rounded shadow overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <Spinner className="w-12 h-12 text-primary" />
