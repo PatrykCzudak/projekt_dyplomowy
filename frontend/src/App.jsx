@@ -6,7 +6,7 @@ import Transactions from './pages/Transactions';
 import Prices from './pages/Prices';
 import Risk from './pages/Risk';
 import AssetRisk from './pages/AssetRisk';
-import Ideas from './pages/Ideas';
+import PortfolioOptimization  from './pages/PortfolioOptimization';
 import HistoricalChart from './pages/Chart';
 import { ToastProvider } from './components/ui/ToastProvider';
 
@@ -23,7 +23,7 @@ function App() {
           <Route path="prices" element={<Prices />} />
           <Route path="risk" element={<Risk />} />
           <Route path="/risk/asset" element={<AssetRisk />} />
-          <Route path="ideas" element={<Ideas />} />
+          <Route path="optimize" element={<PortfolioOptimization />} />
         </Route>
       </Routes>
     </ToastProvider>
