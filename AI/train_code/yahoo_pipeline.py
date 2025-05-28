@@ -165,6 +165,6 @@ if __name__ == "__main__":
     # pipeline(symbols, period="5y")
 
     # Przykład 2: szybki test na 10 spółkach
-    quick_test(source="sp500", n=110, period="1y")
+    quick_test(source="sp500", n=500, period="5y")
 
     merge_all_csv()
