@@ -1,77 +1,84 @@
-import { useState, useEffect } from "react";
-import { api } from "../services/api";
-import ReactApexChart from "react-apexcharts";
+import React, { useState, useEffect } from 'react';
+import { api } from '../services/api';
+import ReactApexChart from 'react-apexcharts';
+import Spinner from '../components/ui/Spinner';
+import { useToast } from '../components/ui/ToastProvider';
 
 export default function ChartPage() {
-  const [symbol, setSymbol] = useState("AAPL");
-  const [period, setPeriod] = useState("1mo");
-  const [chartType, setChartType] = useState("line");
+  const [symbol, setSymbol] = useState('AAPL');
+  const [period, setPeriod] = useState('1mo');
+  const [chartType, setChartType] = useState('line');
   const [series, setSeries] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const showToast = useToast();
 
   useEffect(() => {
-    api.get(`/assets/${symbol}/history?period=${period}`)
+    setLoading(true);
+    api
+      .get(`/assets/${symbol}/history?period=${period}`)
       .then(res => {
-        const rawData = res.data.ohlc || [];
-        if (chartType === "candlestick") {
-          setSeries([{
-            data: rawData
-          }]);
+        const raw = res.data.ohlc || [];
+        if (chartType === 'candlestick') {
+          setSeries([{ data: raw }]);
         } else {
           setSeries([{
             name: symbol,
-            data: rawData.map(d => ({ x: d.x, y: d.y[3] })) 
+            data: raw.map(d => ({ x: d.x, y: d.y[3] }))
           }]);
         }
       })
       .catch(err => {
-        console.error("Error loading data", err);
-      });
+        console.error('Error loading chart data', err);
+        showToast(`Błąd ładowania danych dla ${symbol}`, 'error');
+      })
+      .finally(() => setLoading(false));
   }, [symbol, period, chartType]);
 
   const options = {
     chart: {
       type: chartType,
-      background: "#1f2937",
-      toolbar: {
-        show: true
-      }
+      toolbar: { show: true },
     },
     xaxis: {
-      type: "category",
+      type: 'category',        
+      tickAmount: 8, 
       labels: {
-        style: {
-          colors: "#ccc"
+        style: { colors: '#ccc' },
+        rotate: -45,
+        hideOverlappingLabels: true,
+        rotateAlways: true,
+        formatter: value => {
+          const d = new Date(value);
+          const day = String(d.getDate()).padStart(2, '0');
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          return `${day}/${month}`;
         }
-      }
+      },
+      axisTicks: { show: true },
     },
     yaxis: {
-      labels: {
-        style: {
-          colors: "#ccc"
-        }
-      }
+      labels: { style: { colors: '#ccc' } },
     },
-    theme: {
-      mode: "dark"
-    }
+    theme: { mode: 'dark' },
+    stroke: { curve: 'smooth' },
+    grid: { borderColor: '#333' },
   };
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-semibold text-white mb-4">Asset Chart</h1>
-      
-      <div className="flex gap-4 mb-6">
+    <div className="flex flex-col h-screen bg-gray-800 p-4">
+      {/* Controls */}
+      <div className="flex flex-wrap items-center gap-4 mb-4">
         <input
           type="text"
           value={symbol}
-          onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-          className="px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded"
-          placeholder="Enter symbol (e.g. AAPL)"
+          onChange={e => setSymbol(e.target.value.toUpperCase())}
+          className="px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded w-32"
+          placeholder="Symbol"
         />
         <select
           value={period}
-          onChange={(e) => setPeriod(e.target.value)}
-          className="px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded"
+          onChange={e => setPeriod(e.target.value)}
+          className="px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded"
         >
           <option value="1d">1d</option>
           <option value="5d">5d</option>
@@ -82,16 +89,29 @@ export default function ChartPage() {
         </select>
         <select
           value={chartType}
-          onChange={(e) => setChartType(e.target.value)}
-          className="px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded"
+          onChange={e => setChartType(e.target.value)}
+          className="px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded"
         >
           <option value="line">Line</option>
           <option value="candlestick">Candlestick</option>
         </select>
       </div>
 
-      <div className="bg-gray-900 p-4 rounded shadow">
-        <ReactApexChart options={options} series={series} type={chartType} height={400} />
+      {/* Chart area fills remaining space */}
+      <div className="flex-1 w-full bg-gray-900 rounded shadow overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <Spinner className="w-12 h-12 text-primary" />
+          </div>
+        ) : (
+          <ReactApexChart
+            options={options}
+            series={series}
+            type={chartType}
+            width="100%"
+            height="100%"
+          />
+        )}
       </div>
     </div>
   );

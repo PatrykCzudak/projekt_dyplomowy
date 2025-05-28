@@ -15,14 +15,14 @@ export default function Sidebar() {
           <NavLink to="/portfolio" className={({ isActive }) => 
             `${baseClasses} ${isActive ? activeClasses : inactiveClasses}`
           }>
-            <PieChart className="w-4 h-4 mr-2" /> Portfolio
+            <PieChart className="w-4 h-4 mr-2" /> Portfolio Management
           </NavLink>
         </li>
         <li>
           <NavLink to="/transactions" className={({ isActive }) => 
             `${baseClasses} ${isActive ? activeClasses : inactiveClasses}`
           }>
-            <List className="w-4 h-4 mr-2" /> Transactions
+            <List className="w-4 h-4 mr-2" /> Transaction History
           </NavLink>
         </li>
         <li>
