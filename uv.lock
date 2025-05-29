@@ -1005,13 +1005,9 @@ source = { virtual = "." }
 dependencies = [
     { name = "cvxpy" },
     { name = "fastapi" },
-    { name = "keras" },
-    { name = "llmprint" },
     { name = "psycopg2-binary" },
-    { name = "scikit-learn" },
     { name = "scipy" },
     { name = "sqlalchemy" },
-    { name = "tensorflow" },
     { name = "tqdm" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "yfinance" },
@@ -1020,21 +1016,21 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "ipykernel" },
+    { name = "keras" },
+    { name = "llmprint" },
     { name = "lxml" },
     { name = "requests" },
+    { name = "scikit-learn" },
+    { name = "tensorflow" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "cvxpy", specifier = ">=1.6.5" },
     { name = "fastapi", specifier = ">=0.115.12" },
-    { name = "keras", specifier = ">=3.10.0" },
-    { name = "llmprint", specifier = ">=0.1.2" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
-    { name = "scikit-learn", specifier = ">=1.6.1" },
     { name = "scipy", specifier = ">=1.15.3" },
     { name = "sqlalchemy", specifier = ">=2.0.41" },
-    { name = "tensorflow", specifier = ">=2.19.0" },
     { name = "tqdm", specifier = ">=4.67.1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34.2" },
     { name = "yfinance", specifier = ">=0.2.61" },
@@ -1043,8 +1039,12 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "ipykernel", specifier = ">=6.29.5" },
+    { name = "keras", specifier = ">=3.10.0" },
+    { name = "llmprint", specifier = ">=0.1.2" },
     { name = "lxml", specifier = ">=5.4.0" },
     { name = "requests", specifier = ">=2.32.3" },
+    { name = "scikit-learn", specifier = ">=1.6.1" },
+    { name = "tensorflow", specifier = ">=2.19.0" },
 ]
 
 [[package]]
