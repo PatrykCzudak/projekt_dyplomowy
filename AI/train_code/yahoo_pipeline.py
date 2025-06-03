@@ -1,19 +1,20 @@
-"""Pipeline do pobierania danych z Yahoo Finance i budowania zbioru danych.
+"""This is a pipeline used to download date'a from yahoo finance.
 
 ---------
-1. **Parametr `limit` w funkcji `pipeline()`** możesz zatrzymać pobieranie np. na 10 pierwszych spółkach.
-2. **Skrót `quick_test()`** – wywołaj jedną funkcją, aby pobrać *tylko* pierwsze *N* symboli (domyślnie 10) z wybranego źródła.
+**With parameter `limit` in function `pipeline()`** - you can limit the number of processed symbols.
+If `limit` is set to `None`, the pipeline processes all symbols.
+Functions:
+- `fetch_symbols_from_api(source)`: dowloads stock symbols from a specified source (e.g., S&P 500, NASDAQ 100).
+- `load_seen()`: loads already processed symbols from a JSON file.
+- `save_seen(symbols)`: saves processed symbols to a JSON file.
+- 'quick_test(source, n, period)': downloads first *n* symbols from the specified source and runs the pipeline.
+- 'pipeline(symbols, period, delay, limit=None)': processes the date'a for the given symbols.
+- 'merge_all_csv(out_file)': merges all CSV files in the data directory into a single dataset.
 
-Funkcje:
-- `fetch_symbols_from_api(source)`: pobiera listę tickerów (S&P 500 lub Nasdaq 100)
-- `quick_test(source="sp500", n=10, period="1y")`: pobiera *n* symboli i przekazuje do `pipeline()`
-- `pipeline(symbols, period, delay, limit=None)`: wykonuje pełny proces pobierania; gdy `limit` ≠ None, zatrzymuje się po tylu spółkach
-- `merge_all_csv()`: scala pojedyncze pliki w jeden dataset
-
-Przykłady:
->>> quick_test()                     # 10 pierwszych z S&P 500
+Example usage:
+>>> quick_test()                     
 >>> syms = fetch_symbols_from_api("nasdaq100")
->>> pipeline(syms, period="5y", limit=10)  # również 10 pierwszych
+>>> pipeline(syms, period="5y", limit=10) 
 """
 
 from __future__ import annotations
@@ -37,26 +38,26 @@ SEEN_FILE = Path("symbols_seen.json")
 # ────────────────────────────────────────────────────────────────────────────────
 
 def fetch_symbols_from_api(source: str = "sp500") -> List[str]:
-    """Zwróć listę tickerów z wybranego źródła.
-
-    Obsługiwane źródła:
-    - "sp500": tabela S&P 500 (Wikipedía)
-    - "nasdaq100": tabela Nasdaq‑100 (Wikipedía)
+    """Returns a list of stock symbols from a specified source.
+    Parametr `source` describe the source of symbols to fetch.
+    Possible sources:
+    - "sp500"(Wikipedia)
+    - "nasdaq100"(Wikipedia)
     """
 
     if source == "sp500":
         url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-        print(f"[INFO] Pobieram listę S&P 500 z {url} …")
+        print(f"[INFO] I download S&P500 from {url} …")
         table = pd.read_html(url, match="Symbol")[0]
         return table["Symbol"].tolist()
 
     if source == "nasdaq100":
         url = "https://en.wikipedia.org/wiki/Nasdaq-100"
-        print(f"[INFO] Pobieram listę Nasdaq‑100 z {url} …")
+        print(f"[INFO] I download S&P500 from {url} …")
         table = pd.read_html(url, match="Ticker")[0]
         return table["Ticker"].str.replace("\u200b", "").tolist()
 
-    raise ValueError(f"Nieobsługiwane źródło: {source}")
+    raise ValueError(f"Unavaible source: {source}")
 
 # ────────────────────────────────────────────────────────────────────────────────
 # UTIL: set już‑pobranych symboli
@@ -79,14 +80,14 @@ def fetch_and_save(symbol: str, period: str = "max") -> pd.DataFrame | None:
     df = ticker.history(period=period)
 
     if df.empty:
-        print(f"[WARN] Brak danych dla {symbol}")
+        print(f"[WARN] No date'a for {symbol}")
         return None
 
     df = df.reset_index()
     df["Symbol"] = symbol.upper()
     out_path = DATA_DIR / f"{symbol.upper()}.csv"
     df.to_csv(out_path, index=False)
-    print(f"[OK] Zapisano {symbol} → {out_path} ({len(df)} wierszy)")
+    print(f"[OK] Saved as {symbol} → {out_path} ({len(df)} rows)")
     return df
 
 # ────────────────────────────────────────────────────────────────────────────────
@@ -99,13 +100,15 @@ def pipeline(
     delay: tuple[float, float] = (0.5, 1.5),
     limit: int | None = None,
 ) -> None:
-    """Przetwórz listę symboli.
-
-    Parametry:
+    """
+    Process date'a.
+    Parameters:
     - symbols: str iterable
-    - period: okres do pobrania (np. "1y", "5y", "max")
-    - delay: (min, max) sekund między zapytaniami
-    - limit: jeżeli podany, pipeline zakończy się po przetworzeniu tylu *nowych* spółek
+    - period: ex.("1y", "5y", "max")
+    - delay: (min, max) sec between requests
+    - limit: int | None
+        if None, process all symbols;
+        if int, process only that many *new* symbols
     """
 
     seen = load_seen()
@@ -113,12 +116,12 @@ def pipeline(
 
     for raw_symbol in symbols:
         if limit is not None and processed >= limit:
-            print(f"[INFO] Osiągnięto limit {limit} spółek – zatrzymuję pipeline")
+            print(f"[INFO] We reach a limit {limit} of companies, stopping pipeline.")
             break
 
         symbol = raw_symbol.upper().strip()
         if symbol in seen:
-            print(f"[SKIP] {symbol} już pobrany, pomijam")
+            print(f"[SKIP] {symbol} already processed, skipping.")
             continue
 
         try:
@@ -137,7 +140,7 @@ def pipeline(
 # ────────────────────────────────────────────────────────────────────────────────
 
 def quick_test(source: str = "sp500", n: int = 10, period: str = "1y") -> None:
-    """Pobierz n pierwszych symboli z podanego źródła i uruchom pipeline()."""
+    """Downloads first N symbols from the specified source and runs the pipeline."""
     symbols = fetch_symbols_from_api(source)[:n]
     pipeline(symbols, period=period, limit=n)
 
@@ -148,12 +151,12 @@ def quick_test(source: str = "sp500", n: int = 10, period: str = "1y") -> None:
 def merge_all_csv(out_file: str | Path = "dataset.csv") -> None:
     csv_files = list(DATA_DIR.glob("*.csv"))
     if not csv_files:
-        print("[WARN] Brak plików CSV do połączenia")
+        print("[WARN] No CSV files found in the data directory.")
         return
 
     merged = pd.concat([pd.read_csv(p) for p in csv_files], ignore_index=True)
     merged.to_csv(out_file, index=False)
-    print(f"[OK] Scalono {len(csv_files)} plików → {out_file} ({len(merged)} wierszy)")
+    print(f"[OK] Merged {len(csv_files)} files → {out_file} ({len(merged)} rows)")
 
 # ────────────────────────────────────────────────────────────────────────────────
 # CLI – Przykłady użycia

@@ -22,33 +22,33 @@ from tensorflow.keras.utils import to_categorical
 # ────────────────────────────────────────────────────────────────────────────────
 
 def configure_gpu(force_device: str = "AUTO") -> None:
-    """Wykryj i ustaw GPU (lub CPU).
+    """Detect and set GPU or CPU for training.
 
     Parameters
     ----------
-    force_device: "CPU", "GPU" lub "AUTO".
+    force_device: "CPU", "GPU" or "AUTO".
     """
 
     gpus = tf.config.list_physical_devices("GPU")
     if force_device.upper() == "CPU":
         tf.config.set_visible_devices([], "GPU")
-        print("[INFO] Wymuszono trenowanie na CPU")
+        print("[INFO] Forced CPU mode – GPU disabled")
         return
 
     if force_device.upper() == "GPU":
         if not gpus:
-            print("[WARN] Brak dostępnych GPU – przełączam na CPU")
+            print("[WARN] No GPU available, falling back to CPU")
             return
-    # AUTO – użyj GPU jeśli jest
+    # AUTO – use GPU if available
     if gpus:
         try:
             for gpu in gpus:
                 tf.config.experimental.set_memory_growth(gpu, True)
-            print(f"[INFO] Wykryto {len(gpus)} GPU, memory growth włączony")
+            print(f"[INFO] Detected {len(gpus)} GPU(s), enabled memory growth")
         except RuntimeError as e:
-            print("[WARN] Nie udało się skonfigurować GPU:", e)
+            print("[WARN] Failed to configure GPU:", e)
     else:
-        print("[INFO] GPU nie znaleziono, trening na CPU")
+        print("[INFO] No GPU found, training on CPU")
 
 # ────────────────────────────────────────────────────────────────────────────────
 # FEATURE ENGINEERING & LABELING
@@ -70,16 +70,16 @@ def build_feature_df(csv_dir: Path | str = "data", min_len: int = 250) -> pd.Dat
         df["ma20"] = df["return"].rolling(20).mean()
         df["hv20"] = df["return"].rolling(20).std() * math.sqrt(252)
 
-        # Kategorie ryzyka → kody: -1 (NaN) / 0 / 1 / 2
+        # Risk categories → codes: -1 (NaN) / 0 / 1 / 2
         risk_cat = pd.cut(df["hv20"], [-np.inf, 0.20, 0.40, np.inf])
-        df["risk_label"] = risk_cat.cat.codes  # -1 tam, gdzie hv20 = NaN
+        df["risk_label"] = risk_cat.cat.codes  # -1 where hv20 = NaN
 
         feature_cols = ["return", "abs_return", "ma5", "ma20", "hv20"]
         clean_df = df[df["risk_label"] != -1].dropna(subset=feature_cols)
         frames.append(clean_df[feature_cols + ["risk_label"]])
 
     if not frames:
-        raise RuntimeError("Brak danych wejściowych spełniających kryteria – sprawdź katalog CSV lub uruchom pipeline.")
+        raise RuntimeError("No input data met the criteria – check the CSV directory or run the pipeline.")
 
     return pd.concat(frames, ignore_index=True)
 
@@ -155,19 +155,19 @@ def train_and_evaluate(
     with open(scaler_out, "wb") as f:
         pickle.dump(scaler, f)
 
-    print(f"[OK] Zapisano model → {model_out} oraz scaler → {scaler_out}")
+    print(f"[OK] Saved model to {model_out} and scaler to {scaler_out}")
 
 # ────────────────────────────────────────────────────────────────────────────────
 # CLI
 # ────────────────────────────────────────────────────────────────────────────────
 
 def cli():
-    parser = argparse.ArgumentParser(description="Klasyfikacja ryzyka akcji (NN, GPU-ready)")
-    parser.add_argument("--csv_dir", default="data", help="Katalog z plikami CSV od pipeline'u")
+    parser = argparse.ArgumentParser(description="Stock risk classification (NN, GPU-ready)")
+    parser.add_argument("--csv_dir", default="data", help="Directory with CSV files from the pipeline")
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--batch", type=int, default=256)
     parser.add_argument("--patience", type=int, default=5)
-    parser.add_argument("--device", choices=["CPU", "GPU", "AUTO"], default="AUTO", help="Wymuś urządzenie obliczeniowe")
+    parser.add_argument("--device", choices=["CPU", "GPU", "AUTO"], default="AUTO", help="Force compute device")
     args = parser.parse_args()
 
     train_and_evaluate(
@@ -180,3 +180,4 @@ def cli():
 
 if __name__ == "__main__":
     cli()
+
