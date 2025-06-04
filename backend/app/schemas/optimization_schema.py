@@ -2,13 +2,14 @@ from pydantic import BaseModel, Field
 from typing import Dict, List
 
 class MarkowitzRequest(BaseModel):
-    """
-    Request model for Markowitz optimization.
-    """
     gamma: float = Field(
         1.0,
         ge=0,
         description="Współczynnik awersji do ryzyka (gamma). Im wyższy – większa kara za wariancję."
+    )
+    period: str = Field(
+        '5y',
+        description="Okres historyczny danych do analizy (np. '1y', '5y')."
     )
 
 class WeightsResponse(BaseModel):
