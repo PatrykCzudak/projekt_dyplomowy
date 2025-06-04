@@ -7,3 +7,11 @@ class PositionResponse(BaseModel):
     average_price: float
     current_price: float
     change: float
+
+
+class AssetPosition(BaseModel):
+    symbol: str
+    net_qty: float
+
+    class Config:
+        orm_mode = True

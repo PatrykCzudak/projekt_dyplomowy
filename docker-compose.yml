@@ -12,6 +12,9 @@ services:
     ports:
       - "8000:8000"
     restart: on-failure
+    volumes:
+      - ./AI:/app/AI
+      - ./backend:/app/src
 
   db:
     image: postgres:15-alpine
@@ -21,7 +24,7 @@ services:
       - POSTGRES_PASSWORD=password
       - POSTGRES_DB=fastapi_db
     ports:
-      - "5432:5432"
+      - "55432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
