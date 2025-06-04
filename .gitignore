@@ -173,6 +173,9 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+# Ignore
+brudnopis.ipynb
+brudnopis_2.ipynb
 AI/train_code/dataset.csv
 AI/train_code/data
 AI/train_code/symbols_seen.json
