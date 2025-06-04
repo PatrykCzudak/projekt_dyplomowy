@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import risk
 from app.api.v1 import optimization_endpoints 
 from app.api.v1 import risk_classifier
+from app.api.v1 import price
 
 app = FastAPI()
 
@@ -21,6 +22,7 @@ app.include_router(portfolio.router)
 app.include_router(risk.router)
 app.include_router(optimization_endpoints.router)
 app.include_router(risk_classifier.router)
+app.include_router(price.router)
 
 @app.get("/health")
 async def read_health():

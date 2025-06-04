@@ -3,6 +3,8 @@ import { api } from '../services/api';
 import ReactApexChart from 'react-apexcharts';
 import Spinner from '../components/ui/Spinner';
 import { useToast } from '../components/ui/ToastProvider';
+import TickerSelect from '../components/ui/TickerSelect';
+import tickers from '../tickers.json';
 
 export default function ChartPage() {
   const [symbol, setSymbol] = useState('AAPL');
@@ -11,6 +13,11 @@ export default function ChartPage() {
   const [series, setSeries] = useState([]);
   const [loading, setLoading] = useState(false);
   const showToast = useToast();
+
+  const tickerOptions = tickers.map(ticker => ({
+    label: ticker,
+    value: ticker
+  }));
 
   useEffect(() => {
     setLoading(true);
@@ -58,17 +65,24 @@ export default function ChartPage() {
     yaxis: { labels: { style: { colors: '#ccc' } } },
   };
 
+  const handleTickerChange = (selectedOption) => {
+    if (selectedOption && selectedOption.value) {
+      setSymbol(selectedOption.value.toUpperCase());
+    }
+  };
+
   return (
     <div className="bg-gray-800 p-4">
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-4 mb-4">
-        <input
-          type="text"
-          value={symbol}
-          onChange={e => setSymbol(e.target.value.toUpperCase())}
-          className="px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded w-32"
-          placeholder="Symbol"
-        />
+        <div className="w-64">
+          <TickerSelect
+            value={tickerOptions.find(opt => opt.value === symbol)}
+            onChange={handleTickerChange}
+            options={tickerOptions}
+            placeholder="Choose ticker..."
+          />
+        </div>
         <select
           value={period}
           onChange={e => setPeriod(e.target.value)}

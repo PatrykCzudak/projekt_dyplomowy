@@ -1,11 +1,18 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { api } from '../services/api';
 import Chart from 'react-apexcharts';
+import TickerSelect from '../components/ui/TickerSelect';
+import tickers from '../tickers.json';
 
 const AssetRisk = forwardRef((props, ref) => {
   const [symbol, setSymbol] = useState('');
   const [analyses, setAnalyses] = useState([]);
   const [expanded, setExpanded] = useState({});
+
+  const tickerOptions = tickers.map(ticker => ({
+    label: ticker,
+    value: ticker
+  }));
 
   const addAnalysis = (mode) => {
     const id = Date.now();
@@ -38,15 +45,22 @@ const AssetRisk = forwardRef((props, ref) => {
     setExpanded(e => ({ ...e, [id]: !e[id] }));
   };
 
+  const handleTickerChange = (selectedOption) => {
+    if (selectedOption && selectedOption.value) {
+      setSymbol(selectedOption.value.toUpperCase());
+    }
+  };
+
   return (
     <div>
-      <input
-        type="text"
-        value={symbol}
-        onChange={e => setSymbol(e.target.value.toUpperCase())}
-        placeholder="Symbol (e.g. AAPL)"
-        className="mb-4 w-32 px-2 py-1 border border-gray-600 rounded bg-gray-900 text-white"
-      />
+      <div className="w-64">
+        <TickerSelect
+          value={tickerOptions.find(opt => opt.value === symbol)}
+          onChange={handleTickerChange}
+          options={tickerOptions}
+          placeholder="Choose ticker..."
+        />
+      </div>
 
       {analyses.map(a => (
         <div key={a.id} className="my-4 p-4 bg-gray-800 rounded">

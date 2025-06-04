@@ -4,6 +4,8 @@ import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Spinner from '../components/ui/Spinner';
 import { useToast } from '../components/ui/ToastProvider';
+import TickerSelect from '../components/ui/TickerSelect';
+import tickers from '../tickers.json';
 
 export default function TransactionForm({ defaultSymbol = '', onTransactionAdded }) {
   const [asset, setAsset] = useState(defaultSymbol);
@@ -14,7 +16,12 @@ export default function TransactionForm({ defaultSymbol = '', onTransactionAdded
   const [loading, setLoading] = useState(false);
   const showToast = useToast();
 
-  // 1. pobieramy cenę, gdy zmieni się ticker
+  const tickerOptions = tickers.map(ticker => ({
+    label: ticker,
+    value: ticker
+  }));
+
+  //pobieramy cenę, gdy zmieni się ticker
   useEffect(() => {
     if (!asset) return;
     api.get(`/assets/${asset}/history`)
@@ -27,14 +34,14 @@ export default function TransactionForm({ defaultSymbol = '', onTransactionAdded
       .catch(() => setPrice(''));
   }, [asset]);
 
-  // 2. wyliczamy total
+  //wyliczamy total
   useEffect(() => {
     const q = parseFloat(quantity);
     const p = parseFloat(price);
     setTotal(!isNaN(q) && !isNaN(p) ? (q * p).toFixed(2) : '');
   }, [quantity, price]);
 
-  // 3. obsługa submit
+  //obsługa submit
   const handleSubmit = async e => {
     e.preventDefault();
     setLoading(true);
@@ -48,12 +55,17 @@ export default function TransactionForm({ defaultSymbol = '', onTransactionAdded
       const { data: newTx } = await api.post('/transactions/', payload);
       showToast('Dodano transakcję', 'success');
       onTransactionAdded(newTx);
-      // wyczyść formularz
       setQuantity('');
     } catch {
       showToast('Błąd przy dodawaniu transakcji', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTickerChange = (selectedOption) => {
+    if (selectedOption && selectedOption.value) {
+      setAsset(selectedOption.value.toUpperCase());
     }
   };
 
@@ -64,13 +76,14 @@ export default function TransactionForm({ defaultSymbol = '', onTransactionAdded
         {/* Asset */}
         <div className="flex flex-col">
           <label className="text-sm text-gray-700 mb-1">Asset</label>
-          <Input
-            type="text"
-            placeholder="e.g. AAPL"
-            value={asset}
-            onChange={e => setAsset(e.target.value.toUpperCase())}
-            required
-          />
+          <div className="w-64">
+            <TickerSelect
+              value={tickerOptions.find(opt => opt.value === setAsset)}
+              onChange={handleTickerChange}
+              options={tickerOptions}
+              placeholder="Choose ticker..."
+            />
+          </div>
         </div>
 
         {/* Type–select */}
