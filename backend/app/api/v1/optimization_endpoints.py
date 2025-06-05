@@ -2,10 +2,10 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 from typing import List
-
 from app.db.database import get_db
-from app.services.optimization import markowitz_optimize, ai_optimize, efficient_frontier, portfolio_cloud
+from app.services.optimization import markowitz_optimize, efficient_frontier, portfolio_cloud
 from app.schemas.optimization_schema import WeightsResponse, MarkowitzRequest, FrontierPoint
+from app.services.markowitz_ai import ai_markowitz_optimize
 
 router = APIRouter(
     prefix="/optimize",
@@ -24,27 +24,34 @@ async def optimize_markowitz(
 ):
     try:
         weights = await run_in_threadpool(markowitz_optimize, db, req.gamma, req.period)
-        return WeightsResponse(weights=weights)
+        return WeightsResponse(weights=weights, mu={})
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Wewnętrzny błąd serwera: {e}")
 
+#AIAJ -------------------------
 @router.post(
-    "/ai",
+    "/markowitz-ai",
     response_model=WeightsResponse,
-    summary="Optymalizacja portfela metodą AI",
-    description="Zwraca optymalne wagi portfela obliczone prostym modelem AI"
+    summary="AI-Enhanced Markowitz Optimization",
+    description="Performs Markowitz optimization using AI-enhanced μ and recommendations."
 )
-async def optimize_ai(
+async def optimize_markowitz_ai(
+    gamma: float = Query(1.0, ge=0),
+    period: str = Query('5y'),
+    top_n: int = Query(5, ge=1, le=20),
     db: Session = Depends(get_db)
 ):
     try:
-        weights = await run_in_threadpool(ai_optimize, db)
-        return WeightsResponse(weights=weights)
+        result = await run_in_threadpool(ai_markowitz_optimize, db, gamma, period, top_n)
+        return WeightsResponse(weights=result['weights'], mu=result['mu'])
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Wewnętrzny błąd serwera: {e}")
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
 
+#--------------------------------------- Frontierek 
 @router.get(
     "/frontier",
     response_model=List[FrontierPoint],

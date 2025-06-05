@@ -12,6 +12,7 @@ export default function PortfolioOptimization() {
   const [period, setPeriod] = useState('5y');
   const [positions, setPositions] = useState([]);
   const [weights, setWeights] = useState(null);
+  const [muValues, setMuValues] = useState(null);
   const [loadingPositions, setLoadingPositions] = useState(true);
   const [loadingOptimize, setLoadingOptimize] = useState(false);
   const [frontierData, setFrontierData] = useState([]);
@@ -20,7 +21,7 @@ export default function PortfolioOptimization() {
   const [loadingCloud, setLoadingCloud] = useState(false);
   const showToast = useToast();
 
-  //Fetch current positions
+  // Fetch current positions
   useEffect(() => {
     api.get('/portfolio')
       .then(res => setPositions(res.data))
@@ -28,25 +29,29 @@ export default function PortfolioOptimization() {
       .finally(() => setLoadingPositions(false));
   }, []);
 
-  //Run optimization
+  // Run optimization
   const runOptimization = async () => {
     setLoadingOptimize(true);
     try {
       const endpoint = method === 'markowitz'
         ? '/optimize/markowitz'
-        : '/optimize/ai';
-      const payload = method === 'markowitz' ? { gamma, period } : {};
+        : '/optimize/markowitz-ai';
+      const payload = method === 'markowitz'
+        ? { gamma, period }
+        : { gamma, period, top_n: 5 };
       const res = await api.post(endpoint, payload);
       setWeights(res.data.weights);
+      setMuValues(res.data.mu || null);
     } catch {
       showToast('Optimization failed.', 'error');
       setWeights(null);
+      setMuValues(null);
     } finally {
       setLoadingOptimize(false);
     }
   };
 
-  //efficient frontier
+  // Efficient frontier
   useEffect(() => {
     if (method !== 'markowitz') {
       setFrontierData([]);
@@ -59,7 +64,7 @@ export default function PortfolioOptimization() {
       .finally(() => setLoadingFrontier(false));
   }, [gamma, method, period]);
 
-  //portfolio cloud
+  // Portfolio cloud
   useEffect(() => {
     if (method !== 'markowitz') {
       setCloudData([]);
@@ -72,7 +77,7 @@ export default function PortfolioOptimization() {
       .finally(() => setLoadingCloud(false));
   }, [method, period]);
 
-  // 5️⃣ Calculate current weights
+  // Calculate current weights
   const currentWeights = React.useMemo(() => {
     if (!positions.length) return {};
     const vals = positions.map(p => p.total_quantity * p.current_price);
@@ -83,7 +88,7 @@ export default function PortfolioOptimization() {
     }, {});
   }, [positions]);
 
-  // 6️⃣ Pie chart data
+  // Pie chart data
   const labels = Object.keys(currentWeights);
   const seriesCurrent = labels.map(sym => currentWeights[sym]);
   const seriesDesired = labels.map(sym => weights?.[sym] ?? 0);
@@ -94,7 +99,7 @@ export default function PortfolioOptimization() {
     legend: { position: 'bottom' }
   };
 
-  //Efficient frontier chart
+  // Efficient frontier chart
   const frontierOptions = {
     chart: {
       background: '#1f2937',
@@ -164,8 +169,6 @@ export default function PortfolioOptimization() {
 
   return (
     <div className="p-6 bg-surface rounded-lg shadow space-y-6">
-
-      {/* Title */}
       <h1 className="text-2xl font-bold">Portfolio Optimization</h1>
 
       {/* Tabs */}
@@ -185,8 +188,8 @@ export default function PortfolioOptimization() {
         ))}
       </nav>
 
-      {/* Gamma and period - only for Markowitz */}
-      {method === 'markowitz' && (
+      {/* Controls */}
+      {(method === 'markowitz' || method === 'ai') && (
         <div className="flex items-center space-x-4 flex-wrap">
           <div className="flex items-center space-x-2">
             <label className="text-gray-200 flex items-center space-x-1">
@@ -227,7 +230,6 @@ export default function PortfolioOptimization() {
         Optimize Portfolio
       </Button>
 
-      {/* Loading spinner */}
       {loadingPositions && <Spinner className="mx-auto w-8 h-8" />}
 
       {/* Pie charts */}
@@ -247,6 +249,31 @@ export default function PortfolioOptimization() {
               ? <Chart options={pieOptions} series={seriesDesired} type="pie" height={280} />
               : <p className="text-gray-400">Run optimization to see results.</p>}
           </div>
+        </div>
+      )}
+
+      {/* Predicted Returns */}
+      {muValues && (
+        <div className="bg-gray-900 p-4 rounded">
+          <h2 className="text-lg font-medium text-gray-200 mb-2">
+            Predicted Returns (μ)
+          </h2>
+          <table className="min-w-full text-white">
+            <thead>
+              <tr>
+                <th className="px-4 py-2 text-left">Symbol</th>
+                <th className="px-4 py-2 text-left">μ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(muValues).map(([symbol, mu]) => (
+                <tr key={symbol} className="border-t border-gray-700">
+                  <td className="px-4 py-2">{symbol}</td>
+                  <td className="px-4 py-2">{mu.toFixed(4)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -271,13 +298,11 @@ export default function PortfolioOptimization() {
         </div>
       )}
 
-      {/* No positions */}
       {!loadingPositions && positions.length === 0 && (
         <p className="text-red-400">
           No assets in the portfolio — please add transactions to view charts.
         </p>
       )}
-
     </div>
   );
 }

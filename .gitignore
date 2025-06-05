@@ -189,3 +189,6 @@ AI/train_code_price_prediction/dataset_v1.csv
 AI/train_code_price_prediction/dataset_v2.csv
 AI/train_code_price_prediction/symbols_seen_v1.json
 AI/train_code_price_prediction/symbols_seen.json
+
+AI/prediction_returns/dataset.csv
+AI/recommendation_model/dataset.csv

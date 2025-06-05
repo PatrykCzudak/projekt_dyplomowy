@@ -178,9 +178,3 @@ def efficient_frontier(db: Session, num_points: int = 50, gamma_min: float = 0.0
         })
     return frontier
 
-# AI do stworzenia
-def ai_optimize(db: Session) -> Dict[str, float]:
-    symbols = [s[0] for s in db.query(models.Asset.symbol).all()]
-    n = len(symbols)
-    weight = 1.0 / n if n else 0.0
-    return {sym: weight for sym in symbols}

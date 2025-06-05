@@ -23,7 +23,8 @@ class WeightsResponse(BaseModel):
     weights: Dict[str, float] = Field(
         ..., description="Mapping of asset ticker symbols to optimized weights"
     )
-
+    mu: Dict[str, float]
+    
     class Config:
         schema_extra = {
             "example": {

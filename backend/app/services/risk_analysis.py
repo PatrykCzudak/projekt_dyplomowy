@@ -8,8 +8,7 @@ from app.db.database import SessionLocal
 from app.models import models
 from sqlalchemy import case, func
 
-# ── 1. Klasyczne metody dla pojedynczego instrumentu ──────────────────────────
-
+#Klasyczne metody dla pojedynczego instrumentu
 def compute_returns(prices: pd.Series) -> pd.Series:
     """
     Oblicza zwroty procentowe (Close_t / Close_{t-1} - 1) i usuwa NaN.
@@ -50,23 +49,16 @@ def get_historical_prices(symbol: str, period: str = '5y') -> pd.Series:
         raise ValueError(f"Brak danych historycznych dla {symbol}")
     return hist["Close"]
 
+def get_historical_data(symbol: str, period: str = '5y') -> pd.DataFrame:
+    ticker = yf.Ticker(symbol)
+    hist = ticker.history(period=period)
+    if hist.empty:
+        raise ValueError(f"Brak danych historycznych dla {symbol}")
+    hist = hist.reset_index()
+    hist['Symbol'] = symbol
+    return hist[['Date', 'Open', 'High', 'Low', 'Close', 'Volume', 'Symbol']]
 
-# ── 2. Klasy AI (drzewka) ─────────────────────────────────────────────────────
-
-clf = DecisionTreeClassifier().fit([[0.01], [0.05], [0.15]], ['Low', 'Medium', 'High'])
-reg = DecisionTreeRegressor().fit([[0.01], [0.05], [0.15]], [0.012, 0.055, 0.152])
-
-def classify_risk(returns: pd.Series) -> str:
-    sigma = returns.std()
-    return clf.predict([[sigma]])[0]
-
-def predict_risk(returns: pd.Series) -> float:
-    sigma = returns.std()
-    return reg.predict([[sigma]])[0]
-
-
-# ── 3. Nowa funkcja: zwroty portfela bez lazy‐load t.asset ────────────────────
-
+#zwroty portfela
 def get_portfolio_returns(_ignore, period: str = '5y') -> pd.Series:
     """
     Oblicza zwroty portfela na podstawie WSZYSTKICH transakcji w tabeli:
