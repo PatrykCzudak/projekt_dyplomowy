@@ -39,10 +39,6 @@ def expected_shortfall(returns: pd.Series, alpha: float = 0.05) -> float:
     return -tail_losses.mean()
 
 def get_historical_prices(symbol: str, period: str = '5y') -> pd.Series:
-    """
-    Pobiera z Yahoo Finance historyczne ceny CH_close (domyślny okres = '1y').
-    Zwraca Series zamknięć lub rzuca ValueError, jeśli brak danych.
-    """
     ticker = yf.Ticker(symbol)
     hist = ticker.history(period=period)
     if hist.empty:
@@ -60,18 +56,6 @@ def get_historical_data(symbol: str, period: str = '5y') -> pd.DataFrame:
 
 #zwroty portfela
 def get_portfolio_returns(_ignore, period: str = '5y') -> pd.Series:
-    """
-    Oblicza zwroty portfela na podstawie WSZYSTKICH transakcji w tabeli:
-      1) Jedno zapytanie:
-         SELECT Asset.symbol, SUM(CASE WHEN type='BUY' THEN quantity ELSE -quantity END) AS net_qty
-         FROM assets JOIN transactions ON assets.id=transactions.asset_id
-         GROUP BY Asset.symbol
-         HAVING net_qty > 0
-      2) Pobiera z Yahoo Finance historyczne ceny Close dla uzyskanej listy symboli (parametr `period`).
-      3) Oblicza dzienne zwroty procentowe (returns).
-      4) Ostatnie ceny (last_prices) i wagi = (last_price * net_qty) / suma(last_price * net_qty).
-      5) Zwraca Series zwrotów portfela = returns.dot(weights).
-    """
     db = SessionLocal()
 
     qty_case = case(
@@ -88,7 +72,7 @@ def get_portfolio_returns(_ignore, period: str = '5y') -> pd.Series:
         .group_by(models.Asset.symbol)
         .having(func.sum(qty_case) > 0)
     )
-    rows = stmt.all()  # [(symbol1, net1), (symbol2, net2), …]
+    rows = stmt.all()
     db.close()
 
     if not rows:

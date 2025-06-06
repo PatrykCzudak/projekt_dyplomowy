@@ -51,6 +51,26 @@ const AssetRisk = forwardRef((props, ref) => {
     }
   };
 
+  function buildHistogram(data, bins = 30) {
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const binSize = (max - min) / bins || 1;
+    const histogram = new Array(bins).fill(0);
+    const binCenters = new Array(bins).fill(0);
+
+    data.forEach(value => {
+      let binIndex = Math.floor((value - min) / binSize);
+      if (binIndex >= bins) binIndex = bins - 1;
+      histogram[binIndex]++;
+    });
+
+    for (let i = 0; i < bins; i++) {
+      binCenters[i] = min + (i + 0.5) * binSize;
+    }
+
+    return { histogram, binCenters };
+  }
+
   return (
     <div>
       <div className="w-64">
@@ -93,7 +113,7 @@ const AssetRisk = forwardRef((props, ref) => {
                     "
                   >
                     {expanded[a.id] ? 'Hide details' : 'Show more'}
-                  </button>                
+                  </button>
                 </div>
               ) : (
                 <div className="mb-4 space-y-1 text-gray-200">
@@ -113,37 +133,69 @@ const AssetRisk = forwardRef((props, ref) => {
                     "
                   >
                     {expanded[a.id] ? 'Hide details' : 'Show more'}
-                  </button>                
+                  </button>
                 </div>
               )}
-              {expanded[a.id] && (
-                <Chart
-                  options={{
-                    chart: { id: `asset-risk-${a.id}` },
-                    xaxis: {
-                      categories: a.mode === 'Classical'
-                        ? ['VaR Parametric','VaR Historical','Expected Shortfall']
-                        : ['Prediction']
-                    },
-                    theme: { mode: 'dark' },
-                    stroke: { curve: 'smooth' },
-                    yaxis: { labels: { style: { colors: '#ccc' } } },
-                    grid: { borderColor: '#333' }
-                  }}
-                  series={[{
-                    name: 'Value',
-                    data: a.mode === 'Classical'
-                      ? [
-                          a.data.VaR_parametric,
-                          a.data.VaR_historical,
-                          a.data.Expected_Shortfall
+              {expanded[a.id] && a.mode === 'Classical' && (() => {
+                const { histogram, binCenters } = buildHistogram(a.data.returns);
+                return (
+                  <Chart
+                    options={{
+                      chart: { id: `asset-risk-${a.id}` },
+                      xaxis: {
+                        type: 'numeric',
+                        labels: { style: { colors: '#ccc' } },
+                        title: { text: 'Returns', style: { color: '#ccc' } }
+                      },
+                      yaxis: {
+                        labels: { style: { colors: '#ccc' } },
+                        title: { text: 'Frequency', style: { color: '#ccc' } }
+                      },
+                      annotations: {
+                        xaxis: [
+                          {
+                            x: -a.data.VaR_parametric,
+                            borderColor: '#FF0000',
+                            label: {
+                              borderColor: '#FF0000',
+                              style: { color: '#fff', background: '#FF0000' },
+                              text: `Parametric VaR`
+                            }
+                          },
+                          {
+                            x: -a.data.VaR_historical,
+                            borderColor: '#00FF00',
+                            label: {
+                              borderColor: '#00FF00',
+                              style: { color: '#000', background: '#00FF00' },
+                              text: `Historical VaR`
+                            }
+                          },
+                          {
+                            x: -a.data.Expected_Shortfall,
+                            borderColor: '#FFA500',
+                            label: {
+                              borderColor: '#FFA500',
+                              style: { color: '#000', background: '#FFA500' },
+                              text: `Expected Shortfall`
+                            }
+                          }
                         ]
-                      : [a.data.risk_prediction]
-                  }]}
-                  type="bar"
-                  height={300}
-                />
-              )}
+                      },
+                      theme: { mode: 'dark' },
+                      grid: { borderColor: '#333' }
+                    }}
+                    series={[
+                      {
+                        name: 'Frequency',
+                        data: binCenters.map((center, idx) => ({ x: center, y: histogram[idx] }))
+                      }
+                    ]}
+                    type="bar"
+                    height={300}
+                  />
+                );
+              })()}
             </>
           ) : (
             <p className="text-gray-400">Loading…</p>

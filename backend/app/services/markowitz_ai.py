@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import pickle
 import tensorflow as tf
-from cvxpy import Variable, quad_form, Problem, Maximize, OSQP
+from cvxpy import Variable, quad_form, Problem, Maximize, OSQP, sum_squares
 from sqlalchemy.orm import Session
 from sqlalchemy import case, func
 from app.models import models
@@ -14,35 +14,24 @@ BASE_DIR = os.path.join(os.path.dirname(__file__), '../../../AI')
 def load_models():
     models_dict = {}
 
-    # Model 1: Prediction Model
-    pred_model_path = os.path.join(BASE_DIR, 'prediction_model.h5')
-    scaler_pred_path = os.path.join(BASE_DIR, 'prediction_model_scaler.pkl')
+    # Model 1: Prediction Model (CNN+Transformer)
+    pred_model_path = os.path.join(BASE_DIR, 'prediction_model_5d.h5')
+    scaler_pred_path = os.path.join(BASE_DIR, 'prediction_model_5d_scaler.pkl')
     models_dict['prediction'] = tf.keras.models.load_model(pred_model_path, compile=False)
     with open(scaler_pred_path, 'rb') as f:
         models_dict['prediction_scaler'] = pickle.load(f)
 
-    # Model 2: Risk LSTM
-    risk_model_path = os.path.join(BASE_DIR, 'risk_lstm_model.h5')
-    scaler_risk_path = os.path.join(BASE_DIR, 'scaler_lstm.pkl')
-    models_dict['risk'] = tf.keras.models.load_model(risk_model_path, compile=False)
-    with open(scaler_risk_path, 'rb') as f:
-        models_dict['risk_scaler'] = pickle.load(f)
-
-    # Model 3: Recommendation Model
+    # Model 2: Recommendation Model (CatBoost)
     rec_model_path = os.path.join(BASE_DIR, 'recommendation_model.pkl')
-    scaler_rec_path = os.path.join(BASE_DIR, 'recommendation_model_scaler.pkl')
     with open(rec_model_path, 'rb') as f:
         models_dict['recommendation'] = pickle.load(f)
-    with open(scaler_rec_path, 'rb') as f:
-        models_dict['recommendation_scaler'] = pickle.load(f)
 
     print("AI models loaded successfully.")
     return models_dict
 
 MODELS = load_models()
 
-def ai_markowitz_optimize(db: Session, gamma: float, period: str = '5y', top_n: int = 5) -> dict:
-
+def ai_markowitz_optimize(db: Session, gamma: float, period: str = '5y', top_n: int = 5, lambda_reg: float = 0.15) -> dict:
     qty_case = case(
         (models.Transaction.type == "BUY", models.Transaction.quantity),
         (models.Transaction.type == "SELL", -models.Transaction.quantity),
@@ -80,21 +69,26 @@ def ai_markowitz_optimize(db: Session, gamma: float, period: str = '5y', top_n: 
     if not mu_dict:
         raise ValueError("Failed to predict expected returns.")
 
-    returns_list = []
+    # Rolling covariance (window=60)
+    window_size = 60
+    returns_df = pd.DataFrame()
     for sym in recommended_symbols:
         sub_df = df[df['Symbol'] == sym].sort_values(['Date'])
         sub_df['Return'] = sub_df['Close'].pct_change()
-        returns_list.append(sub_df['Return'].dropna().values)
+        returns_df[sym] = sub_df['Return'].reset_index(drop=True)
 
-    returns_df = pd.DataFrame(returns_list).T
-    returns_df.columns = recommended_symbols
-    Sigma = returns_df.cov().values
+    returns_df = returns_df.dropna()
+    rolling_returns = returns_df.tail(window_size)
+    Sigma = rolling_returns.cov().values
 
     mu = np.array([mu_dict[sym] for sym in recommended_symbols])
-    n = len(mu)
+    mu_shifted = mu - mu.min() + 0.01
+
+    n = len(mu_shifted)
     w = Variable(n)
 
-    obj = Maximize(mu.T @ w - (gamma/2) * quad_form(w, Sigma))
+
+    obj = Maximize(mu_shifted.T @ w - (gamma/2) * quad_form(w, Sigma) - lambda_reg * sum_squares(w))
     constraints = [w >= 0.01, sum(w) == 1]
     prob = Problem(obj, constraints)
     prob.solve(solver=OSQP)
@@ -105,11 +99,10 @@ def ai_markowitz_optimize(db: Session, gamma: float, period: str = '5y', top_n: 
     weights = {sym: float(w_val) for sym, w_val in zip(recommended_symbols, w.value)}
     return {
         "weights": weights,
-        "mu": mu_dict
+        "mu": {sym: round(float(mu_val), 6) for sym, mu_val in zip(recommended_symbols, mu)}
     }
 
 def recommend_assets(df: pd.DataFrame, top_n: int = 5):
-    scaler = MODELS['recommendation_scaler']
     model = MODELS['recommendation']
 
     df = df.sort_values(['Symbol', 'Date'])
@@ -117,14 +110,14 @@ def recommend_assets(df: pd.DataFrame, top_n: int = 5):
     df['Momentum'] = df.groupby('Symbol')['Close'].transform(lambda x: x / x.shift(20) - 1)
     df = df.dropna(subset=['Return', 'Momentum'])
 
-    features = ['Return', 'Momentum']
-    recommended = []
+    df['Symbol_Code'] = df['Symbol'].astype('category').cat.codes
+    features = ['Return', 'Momentum', 'Symbol_Code']
 
+    recommended = []
     for symbol in df['Symbol'].unique():
         sub_df = df[df['Symbol'] == symbol].iloc[-1:]
         X = sub_df[features].values
-        X_scaled = scaler.transform(X)
-        pred = model.predict(X_scaled)[0]
+        pred = model.predict(X)[0]
         recommended.append((symbol, pred))
 
     recommended = sorted(recommended, key=lambda x: x[1], reverse=True)
@@ -143,21 +136,37 @@ def predict_mu(df: pd.DataFrame, symbols: list):
         sub_df['RSI'] = sub_df['Close'].transform(compute_rsi)
         sub_df['MACD'] = sub_df['Close'].transform(lambda x: compute_macd(x)[0])
         sub_df['MACD_signal'] = sub_df['Close'].transform(lambda x: compute_macd(x)[1])
-        sub_df = sub_df.dropna(subset=['Return', 'RSI', 'MACD', 'MACD_signal'])
+        sub_df['Momentum'] = sub_df['Close'].pct_change(periods=5)
+        sub_df['MA5'] = sub_df['Close'].rolling(window=5).mean()
+        sub_df['STD5'] = sub_df['Close'].rolling(window=5).std()
 
-        features = ['Close', 'Volume', 'Return', 'RSI', 'MACD', 'MACD_signal']
+        sub_df['Symbol_Code'] = sub_df['Symbol'].astype('category').cat.codes
+        sub_df = sub_df.dropna(subset=[
+            'Return', 'RSI', 'MACD', 'MACD_signal', 'Momentum', 'MA5', 'STD5'
+        ])
+
+        features = [
+            'Close', 'Volume', 'Return', 'RSI', 'MACD', 'MACD_signal',
+            'Momentum', 'MA5', 'STD5'
+        ]
+
         if len(sub_df) < SEQ_LEN:
             continue
 
-        try:
-            for col in features:
-                sub_df[f'Scaled_{col}'] = scaler.transform(sub_df[[col]])
-        except Exception as e:
-            continue
+        scaled_features = scaler.transform(sub_df[features])
+        sub_df_scaled = pd.DataFrame(
+            scaled_features,
+            columns=[f'Scaled_{col}' for col in features],
+            index=sub_df.index
+        )
+        sub_df = pd.concat([sub_df, sub_df_scaled], axis=1)
 
-        seq = sub_df.iloc[-SEQ_LEN:][[f'Scaled_{col}' for col in features]].values
-        seq = np.expand_dims(seq, axis=0)
-        pred = model.predict(seq)[0][0]
+        seq_other = sub_df.iloc[-SEQ_LEN:][[f'Scaled_{col}' for col in features]].values
+        seq_symbol = sub_df.iloc[-SEQ_LEN:]['Symbol_Code'].values.reshape(-1, 1)
+        seq_other = np.expand_dims(seq_other, axis=0)
+        seq_symbol = np.expand_dims(seq_symbol, axis=0)
+
+        pred = model.predict({'other_features': seq_other, 'symbol_code': seq_symbol})[0][0]
         mu_dict[sym] = pred
 
     return mu_dict

@@ -38,9 +38,9 @@ async def optimize_markowitz(
     description="Performs Markowitz optimization using AI-enhanced μ and recommendations."
 )
 async def optimize_markowitz_ai(
-    gamma: float = Query(1.0, ge=0),
+    gamma: float = Query(10.0, ge=0),
     period: str = Query('5y'),
-    top_n: int = Query(5, ge=1, le=20),
+    top_n: int = Query(20, ge=1, le=20),
     db: Session = Depends(get_db)
 ):
     try:
