@@ -108,15 +108,42 @@ def recommend_assets(df: pd.DataFrame, top_n: int = 5):
     df = df.sort_values(['Symbol', 'Date'])
     df['Return'] = df.groupby('Symbol')['Close'].pct_change()
     df['Momentum'] = df.groupby('Symbol')['Close'].transform(lambda x: x / x.shift(20) - 1)
-    df = df.dropna(subset=['Return', 'Momentum'])
+    df['Return_lag1'] = df.groupby('Symbol')['Return'].shift(1)
+    df['Return_lag5'] = df.groupby('Symbol')['Return'].shift(5)
+    df['RollingMean_5'] = df.groupby('Symbol')['Close'].transform(lambda x: x.rolling(window=5).mean())
+    df['RollingStd_5'] = df.groupby('Symbol')['Close'].transform(lambda x: x.rolling(window=5).std())
+
+    exp12 = df.groupby('Symbol')['Close'].transform(lambda x: x.ewm(span=12, adjust=False).mean())
+    exp26 = df.groupby('Symbol')['Close'].transform(lambda x: x.ewm(span=26, adjust=False).mean())
+    df['MACD'] = exp12 - exp26
+
+    df['Bollinger_Upper'] = df.groupby('Symbol')['Close'].transform(lambda x: x.rolling(window=20).mean() + 2 * x.rolling(window=20).std())
+    df['Bollinger_Lower'] = df.groupby('Symbol')['Close'].transform(lambda x: x.rolling(window=20).mean() - 2 * x.rolling(window=20).std())
+    df['Bollinger_Width'] = df['Bollinger_Upper'] - df['Bollinger_Lower']
+
+    df['Stochastic_14'] = df.groupby('Symbol')['Close'].transform(
+        lambda x: 100 * (x - x.rolling(window=14).min()) / 
+                (x.rolling(window=14).max() - x.rolling(window=14).min())
+    )
+
+    df['Volatility_20'] = df.groupby('Symbol')['Return'].transform(lambda x: x.rolling(window=20).std())
+
+    df = df.dropna(subset=[
+        'Return', 'Momentum', 'Return_lag1', 'Return_lag5',
+        'RollingMean_5', 'RollingStd_5', 'MACD',
+        'Bollinger_Width', 'Stochastic_14', 'Volatility_20'
+    ])
 
     df['Symbol_Code'] = df['Symbol'].astype('category').cat.codes
-    features = ['Return', 'Momentum', 'Symbol_Code']
+
+    features = ['Return', 'Momentum', 'Return_lag1', 'Return_lag5', 
+                'RollingMean_5', 'RollingStd_5', 'MACD', 
+                'Bollinger_Width', 'Stochastic_14', 'Volatility_20', 'Symbol']
 
     recommended = []
     for symbol in df['Symbol'].unique():
         sub_df = df[df['Symbol'] == symbol].iloc[-1:]
-        X = sub_df[features].values
+        X = sub_df[features]
         pred = model.predict(X)[0]
         recommended.append((symbol, pred))
 
