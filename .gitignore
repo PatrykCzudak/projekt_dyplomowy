@@ -176,21 +176,12 @@ cython_debug/
 # Ignore
 brudnopis.ipynb
 brudnopis_2.ipynb
-AI/train_code_clasification/data/
-AI/train_code_clasification/dataset.csv 
-AI/train_code_clasification/dataset_v1.csv
-AI/train_code_clasification/dataset_v2.csv
 AI/train_code_clasification/symbols_seen_v1.json
 AI/train_code_clasification/symbols_seen.json
 
-AI/train_code_price_prediction/data/
-AI/train_code_price_prediction/dataset.csv
-AI/train_code_price_prediction/dataset_v1.csv
-AI/train_code_price_prediction/dataset_v2.csv
 AI/train_code_price_prediction/symbols_seen_v1.json
 AI/train_code_price_prediction/symbols_seen.json
 
-AI/prediction_returns/dataset.csv
-AI/recommendation_model/dataset.csv
+*.csv
 
-AI/
+*.npy
