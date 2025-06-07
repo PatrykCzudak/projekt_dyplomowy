@@ -4,10 +4,13 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from pathlib import Path
 import pickle
 
+# Dane
 csv_path = Path('dataset.csv')
 df = pd.read_csv(csv_path, parse_dates=['Date'])
 df = df.sort_values(['Symbol', 'Date'])
 
+# Tworzenie Ficzrów
+# RSI (Relative Strength Index).
 def compute_rsi(series, period=14):
     delta = series.diff()
     up = delta.clip(lower=0)
@@ -17,7 +20,7 @@ def compute_rsi(series, period=14):
     rs = gain / loss
     rsi = 100 - (100 / (1 + rs))
     return rsi
-
+# MACD (Moving Average Convergence Divergence) 
 def compute_macd(series, fast=12, slow=26, signal=9):
     exp1 = series.ewm(span=fast, adjust=False).mean()
     exp2 = series.ewm(span=slow, adjust=False).mean()
@@ -40,6 +43,7 @@ df = df.dropna(subset=feature_cols + ['Symbol_Code', 'Return_5d'])
 
 df = df.reset_index(drop=True)
 
+# Skaler na przedział (0-1)
 scaler = MinMaxScaler()
 scaled_features = scaler.fit_transform(df[feature_cols])
 scaled_df = pd.DataFrame(scaled_features, columns=[f'Scaled_{col}' for col in feature_cols], index=df.index)
@@ -48,9 +52,11 @@ df = pd.concat([df, scaled_df], axis=1)
 scaler_return = StandardScaler()
 y_scaled = scaler_return.fit_transform(df['Return_5d'].values.reshape(-1,1)).flatten()
 
+# Sekwencja do uczenia
 SEQ_LEN = 20
 features_scaled = [f'Scaled_{col}' for col in feature_cols]
 
+# Sekwencja danych wejściowych i wartości docelowych.
 def create_sequences(data, target):
     X_other, X_symbol, y = [], [], []
     for i in range(len(data) - SEQ_LEN):
@@ -62,6 +68,7 @@ def create_sequences(data, target):
         y.append(target_value)
     return np.array(X_other), np.array(X_symbol), np.array(y)
 
+# Grupowanie danych według symbolu i tworzenie sekwencji
 X_other, X_symbol, y = [], [], []
 for symbol in df['Symbol'].unique():
     df_sym = df[df['Symbol'] == symbol]
@@ -87,4 +94,4 @@ with open('scaler.pkl', 'wb') as f:
 with open('scaler_return.pkl', 'wb') as f:
     pickle.dump(scaler_return, f)
 
-print("[INFO] Dane przygotowane i zapisane.")
+print("Dane przygotowane i zapisane.")

@@ -2,41 +2,40 @@ from pydantic import BaseModel, Field
 from typing import Dict, List
 
 class MarkowitzRequest(BaseModel):
+    """
+    Request model for Markowitz portfolio optimization.
+    """
     gamma: float = Field(
         1.0,
         ge=0,
-        description="Współczynnik awersji do ryzyka (gamma). Im wyższy – większa kara za wariancję."
+        description="Risk aversion coefficient (gamma). The higher it is, the greater the penalty for variance."
     )
     period: str = Field(
         '5y',
-        description="Okres historyczny danych do analizy (np. '1y', '5y')."
+        description="Historical period (e.g. '1y', '5y')."
     )
 
 class WeightsResponse(BaseModel):
     """
-    Response model for portfolio optimization endpoints.
-
-    Attributes:
-        weights (Dict[str, float]):
-            Mapping of asset tickers to their optimized portfolio weights.
+    Response model containing optimized portfolio weights and expected returns.
     """
     weights: Dict[str, float] = Field(
         ..., description="Mapping of asset ticker symbols to optimized weights"
     )
-    mu: Dict[str, float]
-    
-    class Config:
-        schema_extra = {
-            "example": {
-                "weights": {
-                    "AAPL": 0.30,
-                    "MSFT": 0.25,
-                    "GOOG": 0.45
-                }
-            }
-        }
+    mu: Dict[str, float] = Field(
+        ..., description="Rates of return."
+    )
         
 class FrontierPoint(BaseModel):
-    gamma: float = Field(..., description="Risk aversion parameter")
-    risk: float = Field(..., description="Portfolio standard deviation")
-    expected_return: float = Field(..., description="Portfolio expected return")
+    """
+    Model representing a point on the efficient frontier.
+    """
+    gamma: float = Field(
+        ..., description="Risk aversion parameter"
+    )
+    risk: float = Field(
+        ..., description="Portfolio standard deviation"
+    )
+    expected_return: float = Field(
+        ..., description="Portfolio expected return"
+    )

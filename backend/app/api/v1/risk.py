@@ -29,12 +29,6 @@ def asset_risk_classical(symbol: str, alpha: float = 0.05):
     
 @router.get("/asset/{symbol}/classical")
 def asset_risk_classical(symbol: str, alpha: float = 0.05):
-    """
-    Klasyczna analiza ryzyka dla pojedynczego tickeru:
-      - VaR parametryczny
-      - VaR historyczny
-      - Expected Shortfall (ES)
-    """
     try:
         prices = ra.get_historical_prices(symbol)
         returns = ra.compute_returns(prices)
@@ -56,7 +50,7 @@ def portfolio_risk_classical(portfolio_id: int, alpha: float = 0.05):
         VaR_historical = ra.var_historical(returns, alpha)
         ES = ra.expected_shortfall(returns, alpha)
 
-        # Przygotowanie danych P&L i dat
+        #P&L do histogramów
         returns_list = returns.tolist()
         dates_list = returns.index.strftime('%Y-%m-%d').tolist()
 

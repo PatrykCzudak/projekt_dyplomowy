@@ -3,7 +3,7 @@ import Spinner from './Spinner';
 
 export default function Button({
   children,
-  variant = 'primary',  // 'primary' | 'secondary'
+  variant = 'primary',
   disabled = false,
   loading = false,
   className = '',

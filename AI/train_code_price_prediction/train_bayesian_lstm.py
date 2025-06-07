@@ -1,7 +1,3 @@
-"""
-Trenuje model Bayesian LSTM na rolling window i przewiduje log-zwroty (lub ceny) na 5 dni w przód.
-"""
-
 import os
 import numpy as np
 import pandas as pd
@@ -116,7 +112,7 @@ def main(csv_file, epochs=30, batch_size=128):
     with open(os.path.join(AI_FOLDER, "price_forecast_scaler.pkl"), "wb") as f:
         import pickle
         pickle.dump(scaler, f)
-    print("Model Saved!")
+    print("Model Saved")
 
 if __name__ == "__main__":
     import argparse

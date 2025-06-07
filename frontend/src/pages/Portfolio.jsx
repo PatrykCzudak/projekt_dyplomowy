@@ -68,17 +68,21 @@ export default function PortfolioTable({ refreshTrigger, onRowClick }) {
                         </td>
                         <td className="py-2 px-4 text-sm text-right">${value.toFixed(2)}</td>
                         <td className="py-2 px-4 text-sm text-right">
-                          {percentChange >= 0 ? (
-                            <span className="text-green-500 flex items-center justify-end">
-                              <TrendingUp className="w-4 h-4 mr-1" />
-                              +{formattedPercent}%
-                            </span>
-                          ) : (
-                            <span className="text-red-500 flex items-center justify-end">
-                              <TrendingDown className="w-4 h-4 mr-1" />
-                              {formattedPercent}%
-                            </span>
-                          )}
+                        {parseFloat(percentChange.toFixed(2)) > 0 ? (
+                          <span className="text-green-500 flex items-center justify-end">
+                            <TrendingUp className="w-4 h-4 mr-1" />
+                            +{formattedPercent}%
+                          </span>
+                        ) : parseFloat(percentChange.toFixed(2)) < 0 ? (
+                          <span className="text-red-500 flex items-center justify-end">
+                            <TrendingDown className="w-4 h-4 mr-1" />
+                            {formattedPercent}%
+                          </span>
+                        ) : (
+                          <span className="text-orange-500 flex items-center justify-end">
+                            ={parseFloat(percentChange.toFixed(2))}%
+                          </span>
+                        )}
                         </td>
                       </tr>
                     );

@@ -28,9 +28,6 @@ def compute_macd(series, fast=12, slow=26, signal=9):
     return macd, macd_signal
 
 def compute_features(sub_df):
-    """
-    Oblicz cechy techniczne dla pojedynczego tickera.
-    """
     sub_df = sub_df.sort_values("Date").reset_index(drop=True)
     sub_df["return"] = sub_df["Close"].pct_change()
     sub_df["abs_return"] = sub_df["return"].abs()
@@ -42,9 +39,6 @@ def compute_features(sub_df):
     return sub_df
 
 def build_sequences(df, future_horizon=1, min_len=250):
-    """
-    Buduje rolling windows (X, y) dla wszystkich tickerów.
-    """
     all_X, all_y = [], []
     for symbol, sub_df in df.groupby("Symbol"):
         if len(sub_df) < min_len:
@@ -73,9 +67,6 @@ def build_sequences(df, future_horizon=1, min_len=250):
     return X, y
 
 def build_lstm_model(input_shape):
-    """
-    Buduje model LSTM.
-    """
     model = tf.keras.Sequential([
         tf.keras.layers.Input(shape=input_shape),
         tf.keras.layers.LSTM(64, return_sequences=False),
@@ -92,10 +83,10 @@ def main(csv_file, future_horizon=1, epochs=20, batch_size=128):
     AI_FOLDER = script_dir
     os.makedirs(os.path.join(AI_FOLDER, "plots"), exist_ok=True)
 
-    print("Wczytuję dane...")
+    print("Wczytuję dane")
     df = pd.read_csv(csv_file, parse_dates=["Date"])
 
-    print("Generuję rolling windows...")
+    print("Generuję rolling windows")
     X, y = build_sequences(df, future_horizon=future_horizon)
     print(f"Dane gotowe: X={X.shape}, y={y.shape}")
 

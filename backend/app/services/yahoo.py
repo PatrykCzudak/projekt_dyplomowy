@@ -1,6 +1,9 @@
 import yfinance as yf
 
 def get_current_price(symbol: str) -> tuple[float, float]:
+    """
+    Retrieves the most recent closing price and its percentage change from the previous day.
+    """
     ticker = yf.Ticker(symbol)
     hist = ticker.history(period="2d")
 

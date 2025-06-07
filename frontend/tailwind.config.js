@@ -4,22 +4,22 @@ module.exports = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#1E40AF',    // Tailwind blue-800
-          light:   '#3B82F6',    // blue-500
-          dark:    '#1E3A8A',    // blue-900
+          DEFAULT: '#1E40AF',
+          light:   '#3B82F6',
+          dark:    '#1E3A8A',
         },
         secondary: {
-          DEFAULT: '#9333EA',    // purple-600
-          light:   '#C084FC',    // purple-300
-          dark:    '#6B21A8',    // purple-800
+          DEFAULT: '#9333EA',
+          light:   '#C084FC',
+          dark:    '#6B21A8',
         },
-        success:   '#10B981',      // green-500
-        error:     '#EF4444',      // red-500
-        warning:   '#F59E0B',      // yellow-500
-        info:      '#3B82F6',      // blue-500
-        background: '#F3F4F6',     // gray-100
-        surface:    '#FFFFFF',     // white
-        border:     '#D1D5DB',     // gray-300
+        success:   '#10B981',
+        error:     '#EF4444',
+        warning:   '#F59E0B',
+        info:      '#3B82F6',
+        background: '#F3F4F6',
+        surface:    '#FFFFFF',
+        border:     '#D1D5DB',
       },
       spacing: {
         1: '4px',

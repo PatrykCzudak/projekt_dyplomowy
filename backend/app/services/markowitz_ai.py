@@ -12,16 +12,19 @@ from app.services.risk_analysis import get_historical_data
 BASE_DIR = os.path.join(os.path.dirname(__file__), '../../../AI')
 
 def load_models():
+    """
+    Loads the AI models.
+    """
     models_dict = {}
 
-    # Model 1: Prediction Model (CNN+Transformer)
+    # Prediction Model (CNN+Transformer)
     pred_model_path = os.path.join(BASE_DIR, 'prediction_model_5d.h5')
     scaler_pred_path = os.path.join(BASE_DIR, 'prediction_model_5d_scaler.pkl')
     models_dict['prediction'] = tf.keras.models.load_model(pred_model_path, compile=False)
     with open(scaler_pred_path, 'rb') as f:
         models_dict['prediction_scaler'] = pickle.load(f)
 
-    # Model 2: Recommendation Model (CatBoost)
+    # Recommendation Model (CatBoost)
     rec_model_path = os.path.join(BASE_DIR, 'recommendation_model.pkl')
     with open(rec_model_path, 'rb') as f:
         models_dict['recommendation'] = pickle.load(f)
@@ -32,6 +35,9 @@ def load_models():
 MODELS = load_models()
 
 def ai_markowitz_optimize(db: Session, gamma: float, period: str = '5y', top_n: int = 5, lambda_reg: float = 0.15) -> dict:
+    """
+    Optimizes a portfolio using the Markowitz method with risk aversion and diversification constraints.
+    """
     qty_case = case(
         (models.Transaction.type == "BUY", models.Transaction.quantity),
         (models.Transaction.type == "SELL", -models.Transaction.quantity),
@@ -103,6 +109,9 @@ def ai_markowitz_optimize(db: Session, gamma: float, period: str = '5y', top_n: 
     }
 
 def recommend_assets(df: pd.DataFrame, top_n: int = 5):
+    """
+    Recommends the top N assets using the AI recommendation model.
+    """
     model = MODELS['recommendation']
 
     df = df.sort_values(['Symbol', 'Date'])
@@ -152,6 +161,9 @@ def recommend_assets(df: pd.DataFrame, top_n: int = 5):
     return top_symbols
 
 def predict_mu(df: pd.DataFrame, symbols: list):
+    """
+    Predicts the expected returns (mu) for each asset symbol using the AI model.
+    """
     scaler = MODELS['prediction_scaler']
     model = MODELS['prediction']
     SEQ_LEN = 20
@@ -198,7 +210,11 @@ def predict_mu(df: pd.DataFrame, symbols: list):
 
     return mu_dict
 
+# Znowu te funkcje pomocniczne... Potem trzeba je włożyć do jednego bo wszedzie je używamy
 def compute_rsi(series, period=14):
+    """
+    Computes the Relative Strength Index (RSI) for a time series.
+    """
     series = series.sort_index()
     delta = series.diff()
     up = delta.clip(lower=0)
@@ -210,6 +226,9 @@ def compute_rsi(series, period=14):
     return rsi
 
 def compute_macd(series, fast=12, slow=26, signal=9):
+    """
+    Computes the MACD and MACD signal line for a time series.
+    """
     series = series.sort_index()
     exp1 = series.ewm(span=fast, adjust=False).mean()
     exp2 = series.ewm(span=slow, adjust=False).mean()

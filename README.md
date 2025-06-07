@@ -1,49 +1,63 @@
-### Aplikacja webowa do zarządzania portfelem inwestycyjnym i analizy ryzyka.
+# Intelligent Web Application for Investment Portfolio Analysis
 
-#### Zrealizowane funkcjonalności
-Backend (FastAPI + SQLAlchemy + PostgreSQL)
- - Rejestracja aktywów i transakcji (automatyczne dodawanie aktywa jeśli nie istnieje)
- - Obliczanie i wyświetlanie stanu portfela w czasie rzeczywistym
- - Pobieranie danych historycznych z Yahoo Finance (via yfinance)
- - Moduł analizy ryzyka:
-   - Klasyczne metody:
-     - VaR (parametryczny)
-     - VaR (historyczny)
-     - Expected Shortfall
-   - Metody AI:
-     - Klasyfikacja poziomu ryzyka
-     - Regresja wartości ryzyka
- - Endpointy REST API do pobierania wyników ryzyka dla aktywa i portfela
- - Obsługa CORS (React <-> FastAPI)
+![Technologies](https://img.shields.io/badge/Technologies-Python%20|%20FastAPI%20|%20React%20|%20TensorFlow%20|%20CatBoost-informational)
 
-Frontend (React + Tailwind CSS + ApexCharts)
- - Dynamiczne dodawanie transakcji (z automatycznym przeliczaniem ceny z Yahoo)
- - Widok portfela z aktualną i historyczną wartością pozycji
- - Strona z wykresami historycznymi (wybór aktywa, zakres czasu, typ wykresu – linia/świeczki)
- - Widok "Risk" z zakładkami:
- - Ryzyko aktywa (AssetRisk)
- - Ryzyko portfela (PortfolioRisk)
- - Możliwość dodawania dynamicznych „kafelków” analizy i rozwijania wykresów
+## Project Overview
 
-#### Rzeczy do zrobienia / Do poprawy
- - Obsługa błędów po stronie backendu i frontend
- - Estetyczne dopracowanie UI (np. animacje, kolory, przejścia)
- - Responsywność (dostosowanie do mobile)
- - Autoryzacja / zarządzanie kontami użytkowników
- - Większa kontrola nad wyborem zakresu dat (na frontendzie)
- - Utrwalanie wyników analizy ryzyka (np. do bazy danych)
- - Jednostkowe testy backendu (Pytest)
- - Więcej modeli AI dla oceny ryzyka
- - Implementacja metod optymalizacji portfolio klasycznych (Markowitz) i AI
- - (Opcjonalnie) Tworzenie raportów przy pomocy LLM/SLM
+This web application allows individual investors to analyze and manage their investment portfolios using:
+- classical statistical methods (e.g., VaR, Expected Shortfall),
+- artificial intelligence models (LSTM, Bayesian LSTM, CNN+Transformer, CatBoost).
 
-### Jak uruchomić:
- - Backend:
-   bash
-   - docker compose up --build
- - Frontend:
-   bash
-   - npm instal && npm run dev
+Key features include:
+- Portfolio and asset risk analysis (classical and AI-based).
+- Asset price forecasting.
+- Asset recommendation system.
+- Portfolio optimization (Markowitz and AI-enhanced).
+- Interactive charts and reports.
 
-Frontend dostępny pod: http://localhost:3000
-Backend (FastAPI docs): http://localhost:8000/docs
+## Technologies
+
+- **Backend**: Python, FastAPI, TensorFlow, CatBoost, scikit-learn
+- **Frontend**: React, ApexCharts
+- **Database**: PostgreSQL (SQLAlchemy)
+- **Docker**: for backend and database deployment
+- **Machine Learning**: LSTM, Bayesian LSTM, CNN+Transformer, CatBoost
+
+## Getting Started
+
+## Backend (FastAPI)
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/PatrykCzudak/projekt_dyplomowy.git
+   cd projekt_dyplomowy
+2. Run the backend using Docker:
+   '''bash
+   docker compose up --build
+3. Frontend (React):
+   '''bash
+   cd frontend
+   npm install
+   npm run dev
+
+## Historical Data
+Historical data is fetched from Yahoo Finance using scripts in the AI/ directory and backend/app/services/yahoo.py.
+
+## AI Models
+  - LSTM: classifies asset risk using rolling windows of market data.
+  - Bayesian LSTM: predicts expected returns and uncertainty.
+  - CatBoost: recommends assets based on technical indicators.
+  - CNN+Transformer: forecasts returns using sequential features.
+
+## Application Features
+  - Portfolio Management: manage portfolio, add transactions, view charts.
+  - Transaction History: view all transactions with filtering options.
+  - Charts: visualize historical prices and AI forecasts.
+  - Prices: view current and forecasted prices (Bayesian LSTM).
+  - Risk: analyze asset and portfolio risk using classical and AI methods.
+  - Portfolio Optimization: optimize the portfolio using Markowitz and AI-based methods.
+  - 
+## Future Improvements
+  - Incorporate macroeconomic data into AI models.
+  - Implement automatic hyperparameter tuning.
+  - Integrate additional fundamental indicators.

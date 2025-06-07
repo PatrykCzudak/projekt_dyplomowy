@@ -35,7 +35,7 @@ export default function ChartPage() {
         })
         .catch(err => {
           console.error('Error loading chart data', err);
-          showToast(`Błąd ładowania danych dla ${symbol}`, 'error');
+          showToast(`Error loading data for ${symbol}`, 'error');
         })
         .finally(() => setLoading(false));
     }, 500); // 500 ms
@@ -51,10 +51,10 @@ export default function ChartPage() {
           setForecastData(res.data.forecast);
         })
         .catch(err => {
-          console.error('Błąd ładowania prognozy', err);
-          showToast(`Błąd ładowania prognozy dla ${symbol}`, 'error');
+          console.error('Error loading the forecast', err);
+          showToast(`Error loading the forecast for ${symbol}`, 'error');
         });
-    }, 500); // 500 ms
+    }, 500);
 
     return () => clearTimeout(timeout);
   }, [symbol]);
@@ -62,13 +62,13 @@ export default function ChartPage() {
   const historySeries = chartType === 'candlestick'
     ? []
     : [{
-        name: 'Historyczne',
+        name: 'History',
         data: historicalData.map(d => ({ x: d.date, y: d.close }))
       }];
 
   const forecastSeries = forecastData.length > 0 && historicalData.length > 0 ? [
     {
-      name: 'Prognoza (średnia)',
+      name: 'Prediction (average)',
       data: [
         {
           x: historicalData[historicalData.length - 1].date,
@@ -78,7 +78,7 @@ export default function ChartPage() {
       ]
     },
     {
-      name: 'Prognoza (górny)',
+      name: 'Prediction (upper)',
       data: [
         {
           x: historicalData[historicalData.length - 1].date,
@@ -88,7 +88,7 @@ export default function ChartPage() {
       ]
     },
     {
-      name: 'Prognoza (dolny)',
+      name: 'Prediction (lower)',
       data: [
         {
           x: historicalData[historicalData.length - 1].date,
@@ -151,14 +151,6 @@ export default function ChartPage() {
           <option value="3mo">3mo</option>
           <option value="6mo">6mo</option>
           <option value="1y">1y</option>
-        </select>
-        <select
-          value={chartType}
-          onChange={e => setChartType(e.target.value)}
-          className="px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded"
-        >
-          <option value="line">Line</option>
-          <option value="candlestick">Candlestick</option>
         </select>
       </div>
 

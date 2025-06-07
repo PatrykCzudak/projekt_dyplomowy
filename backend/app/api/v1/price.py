@@ -10,7 +10,7 @@ from datetime import timedelta
 router = APIRouter()
 tfd = tfp.distributions
 
-# Globalne zmienne
+# GLOBALNE ZMIENNE
 price_forecast_model = tf.keras.models.load_model("AI/price_forecast_bayesian_lstm.h5", compile=False)
 with open("AI/price_forecast_scaler.pkl", "rb") as f:
     price_forecast_scaler = pickle.load(f)
@@ -41,7 +41,7 @@ async def forecast_price(symbol: str):
     try:
         df = yf.download(symbol, period="5y", progress=False)
         if df.empty or len(df) < WINDOW_SIZE:
-            raise HTTPException(status_code=404, detail="Brak wystarczających danych historycznych.")
+            raise HTTPException(status_code=404, detail="My Lord. You need more data.")
 
         tmp = df["Close"]
         returns = tmp.pct_change().fillna(0).squeeze()
@@ -66,7 +66,7 @@ async def forecast_price(symbol: str):
         }).fillna(0)
 
         if len(df_feat) < WINDOW_SIZE:
-            raise HTTPException(status_code=400, detail="Za mało danych do utworzenia sekwencji.")
+            raise HTTPException(status_code=400, detail="My Lord. You need more data.")
 
         last_window = df_feat.iloc[-WINDOW_SIZE:].to_numpy(dtype=np.float32)
         scaled = price_forecast_scaler.transform(last_window)
@@ -93,4 +93,4 @@ async def forecast_price(symbol: str):
         return {"forecast": forecast}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Błąd w predykcji: {e}")
+        raise HTTPException(status_code=500, detail=f"Prediction Error: {e}")

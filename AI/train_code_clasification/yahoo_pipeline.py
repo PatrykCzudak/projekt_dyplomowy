@@ -1,31 +1,10 @@
-"""This is a pipeline used to download date'a from yahoo finance.
-
----------
-**With parameter `limit` in function `pipeline()`** - you can limit the number of processed symbols.
-If `limit` is set to `None`, the pipeline processes all symbols.
-Functions:
-- `fetch_symbols_from_api(source)`: dowloads stock symbols from a specified source (e.g., S&P 500, NASDAQ 100).
-- `load_seen()`: loads already processed symbols from a JSON file.
-- `save_seen(symbols)`: saves processed symbols to a JSON file.
-- 'quick_test(source, n, period)': downloads first *n* symbols from the specified source and runs the pipeline.
-- 'pipeline(symbols, period, delay, limit=None)': processes the date'a for the given symbols.
-- 'merge_all_csv(out_file)': merges all CSV files in the data directory into a single dataset.
-
-Example usage:
->>> quick_test()                     
->>> syms = fetch_symbols_from_api("nasdaq100")
->>> pipeline(syms, period="5y", limit=10) 
-"""
-
 from __future__ import annotations
-
 import json
 import random
 import time
 from itertools import islice
 from pathlib import Path
 from typing import Iterable, List, Set
-
 import pandas as pd
 import yfinance as yf
 
@@ -170,17 +149,6 @@ def pipeline(
     delay: tuple[float, float] = (0.5, 1.5),
     limit: int | None = None,
 ) -> None:
-    """
-    Process date'a.
-    Parameters:
-    - symbols: str iterable
-    - period: ex.("1y", "5y", "max")
-    - delay: (min, max) sec between requests
-    - limit: int | None
-        if None, process all symbols;
-        if int, process only that many *new* symbols
-    """
-
     seen = load_seen()
     processed = 0
 

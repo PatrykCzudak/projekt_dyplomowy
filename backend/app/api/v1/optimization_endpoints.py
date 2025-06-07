@@ -15,8 +15,8 @@ router = APIRouter(
 @router.post(
     "/markowitz",
     response_model=WeightsResponse,
-    summary="Optymalizacja portfela metodą Markowitza",
-    description="Zwraca optymalne wagi portfela wg Markowitza z uwzględnieniem gamma i okresu historycznego"
+    summary="Portfolio optymalization Markowitz",
+    description="Return weights for portfolio otimization."
 )
 async def optimize_markowitz(
     req: MarkowitzRequest,
@@ -28,7 +28,7 @@ async def optimize_markowitz(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Wewnętrzny błąd serwera: {e}")
+        raise HTTPException(status_code=500, detail=f"Server Error: {e}")
 
 #AIAJ -------------------------
 @router.post(
@@ -56,13 +56,13 @@ async def optimize_markowitz_ai(
     "/frontier",
     response_model=List[FrontierPoint],
     summary="Efficient frontier",
-    description="Zwraca punkty efektywnej granicy dla siatki wartości gamma i okresu historycznego"
+    description="Returns Effective Frontier points."
 )
 async def get_frontier(
     gamma_min: float = Query(0.0, ge=0),
     gamma_max: float = Query(10.0, ge=0),
     num_points: int = Query(50, ge=2, le=200),
-    period: str = Query('5y', description="Okres historyczny danych do analizy (np. '1y', '5y')."),
+    period: str = Query('5y', description="Historical data period (e.g. '1y', '5y')."),
     db: Session = Depends(get_db)
 ):
     try:
@@ -73,7 +73,7 @@ async def get_frontier(
     except ValueError as e:
         raise HTTPException(400, str(e))
     except Exception as e:
-        raise HTTPException(500, f"Błąd serwera przy liczeniu frontiera: {e}")
+        raise HTTPException(500, f"Server error while calculating efective frontier: {e}")
     
 @router.get(
     "/cloud",

@@ -21,4 +21,5 @@ ENV PYTHONPATH=/app/src
 
 EXPOSE 8000
 
+# Tu dodane jest tworzenie bazy przy uruchamianiu. Potem trzeba wyrzucić
 CMD ["sh", "-c", "python -m app.db.init_db && exec uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"]

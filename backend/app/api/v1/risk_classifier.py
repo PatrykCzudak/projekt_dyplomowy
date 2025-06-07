@@ -7,10 +7,9 @@ import yfinance as yf
 import logging
 
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, case
-
+from app.schemas.risk import *
 from app.db.database import get_db
 from app.models.models import Asset, Transaction
 from app.services import risk_analysis as ra
@@ -42,16 +41,10 @@ def compute_macd(series: pd.Series, fast: int = 12, slow: int = 26, signal: int 
 
 #Budowa Cech
 def extract_features_for_prediction_yahoo(symbol: str, lookback: int = 21) -> np.ndarray:
-    """
-    1) Pobiera z Yahoo Finance dane 'Close' za ostatnie 5 lat (5y).
-    2) Zapewnia, że mamy pd.Series (jeśli to DataFrame z jedną kolumną, bierze pierwszą).
-    3) Na tej serii liczy wskaźniki: return, abs_return, ma5, ma20, hv20, rsi14, macd, macd_signal.
-    4) Zwraca wektor (1×8) cech z ostatniego wiersza.
-    """
     try:
         raw = yf.download(symbol, period="5y", progress=False)["Close"]
     except Exception:
-        raise FileNotFoundError(f"Nie udało się pobrać danych z Yahoo dla symbolu {symbol}")
+        raise FileNotFoundError(f"Failed to retrieve data from Yahoo for the symbol {symbol}")
 
     if isinstance(raw, pd.DataFrame):
         tmp = raw.iloc[:, 0].dropna()
@@ -82,18 +75,15 @@ def extract_features_for_prediction_yahoo(symbol: str, lookback: int = 21) -> np
     last_row = df.iloc[-1]
 
     if last_row.isna().any():
-        raise ValueError(f"Niektóre cechy dla {symbol} są NaN – sprawdź dane historyczne")
+        raise ValueError(f"Some features for {symbol} are NaN. please check the historical data.")
 
     return last_row.to_numpy(dtype=np.float32).reshape(1, -1)
 
 def extract_sequence_for_prediction_yahoo(symbol: str) -> np.ndarray:
-    """
-    Pobiera dane z Yahoo Finance dla tickera i zwraca rolling window (20 dni).
-    """
     try:
         raw = yf.download(symbol, period="5y", progress=False)["Close"]
     except Exception:
-        raise FileNotFoundError(f"Nie udało się pobrać danych z Yahoo dla symbolu {symbol}")
+        raise FileNotFoundError(f"Failed to retrieve data from Yahoo for the symbol {symbol}")
 
     if isinstance(raw, pd.DataFrame):
         tmp = raw.iloc[:, 0].dropna()
@@ -122,7 +112,7 @@ def extract_sequence_for_prediction_yahoo(symbol: str) -> np.ndarray:
     })
 
     if len(df) < WINDOW_SIZE:
-        raise ValueError(f"Zbyt mało danych ({len(df)}) do utworzenia sekwencji {WINDOW_SIZE}-dniowej")
+        raise ValueError(f"Not enough data ({len(df)}) to create a {WINDOW_SIZE}-day sequence.")
 
     seq = df.iloc[-WINDOW_SIZE:].to_numpy(dtype=np.float32).reshape(1, WINDOW_SIZE, -1)
     return seq
@@ -133,9 +123,6 @@ risk_scaler = None
 
 @router.on_event("startup")
 async def load_risk_model_event():
-    """
-    Podczas startu FastAPI wczytujemy model i scaler z katalogu AI/.
-    """
     global risk_model, risk_scaler
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -146,39 +133,23 @@ async def load_risk_model_event():
     scaler_path = os.path.join(ai_folder, "scaler_lstm.pkl")
 
     if not os.path.exists(model_path):
-        print(f"[WARN] Nie znaleziono modelu pod {model_path}")
+        print(f"[ERROR] Model not found for {model_path}")
         return
     if not os.path.exists(scaler_path):
-        print(f"[WARN] Nie znaleziono scalera pod {scaler_path}")
+        print(f"[ERROR] Model not found for {scaler_path}")
         return
 
     try:
         risk_model = tf.keras.models.load_model(model_path)
         with open(scaler_path, "rb") as f:
             risk_scaler = pickle.load(f)
-        print(f"[OK] Załadowano model ryzyka AI z {model_path}")
+        print(f"[OK] Model ready: {model_path}")
     except Exception as e:
-        print(f"[ERROR] Błąd podczas wczytywania modelu/scalera: {e}")
+        print(f"[ERROR] Error while loading the model/scaler {e}")
 
 
-#Modele odpowiedzi dla AI
-class AssetRiskResponse(BaseModel):
-    risk_category: str
-    risk_prediction: float 
-
-class PortfolioRiskResponse(BaseModel):
-    portfolio_id: int
-    risk_category: str
-    risk_prediction: float
-
-
-
-#Bieżące pozycje portfela z tabeli Transaction
+#Bieżące pozycje portfela z tabeli Transaction (quantity > 0)
 def get_current_portfolio_positions(db: Session) -> list[tuple[str, float]]:
-    """
-    Zwraca listę krotek (symbol, net_qty) tylko dla tych assetów,
-    w których net_qty = SUM(BUY.quantity) - SUM(SELL.quantity) > 0.
-    """
     qty_case = case(
         (Transaction.type == "BUY",  Transaction.quantity),
         (Transaction.type == "SELL", -Transaction.quantity),
@@ -199,17 +170,17 @@ def get_current_portfolio_positions(db: Session) -> list[tuple[str, float]]:
     return [(row.symbol, float(row.net_qty)) for row in rows]
 
 
-#Endpoint: AI Asset Risk
+#Endpoint - AI Asset Risk
 @router.get("/asset/{symbol}/ai", response_model=AssetRiskResponse)
 async def get_asset_risk_ai(symbol: str):
     global risk_model, risk_scaler
     if risk_model is None or risk_scaler is None:
-        raise HTTPException(status_code=503, detail="Model AI nie jest jeszcze dostępny")
+        raise HTTPException(status_code=503, detail="Model AI is not avalibe")
 
     try:
         features = extract_sequence_for_prediction_yahoo(symbol.upper())
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail=f"Brak danych historycznych dla {symbol.upper()}")
+        raise HTTPException(status_code=404, detail=f"No historical data for {symbol.upper()}")
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
 
@@ -220,35 +191,26 @@ async def get_asset_risk_ai(symbol: str):
 
     probs = risk_model.predict(scaled).flatten().tolist()
     pred_raw = int(np.argmax(probs))
-    labels = ["niski", "średni", "wysoki"]
+    labels = ["Low", "Medium", "High"]
     return AssetRiskResponse(
         risk_category=labels[pred_raw],
         risk_prediction=probs[pred_raw]
     )
 
 
-#Endpoint: AI Portfolio Risk
+#Endpoint - AI Portfolio Risk
 @router.get("/portfolio/{portfolio_id}/ai", response_model=PortfolioRiskResponse)
 async def get_portfolio_risk_ai(
     portfolio_id: int,
     db: Session = Depends(get_db)
 ):
-    """
-    Prognoza ryzyka AI dla portfela (rolling window):
-      1) Pobierz tickery z Transaction z net_qty > 0,
-      2) Pobierz dane historyczne z Yahoo (5 lat) dla każdego tickera,
-      3) Wylicz rolling window (20 dni) i cechy (return, abs_return, ma5, ma20, hv20, rsi14, macd, macd_signal),
-      4) Wylicz wartość pozycji = net_qty * last_close,
-      5) Zbuduj sekwencję portfela jako ważoną sumę sekwencji tickerów (ważone wartościami pozycji),
-      6) Skaluj dane i predykuj klasę (0,1,2).
-    """
     global risk_model, risk_scaler
     if risk_model is None or risk_scaler is None:
-        raise HTTPException(status_code=503, detail="Model AI nie jest jeszcze dostępny")
+        raise HTTPException(status_code=503, detail="Model AI is not avalible")
 
     positions = get_current_portfolio_positions(db)
     if not positions:
-        raise HTTPException(status_code=404, detail="Brak aktywnych pozycji na portfelu")
+        raise HTTPException(status_code=404, detail="No posiotion in your portfolio!")
 
     feature_cols = ["return", "abs_return", "ma5", "ma20", "hv20", "rsi14", "macd", "macd_signal"]
     portfolio_sequence = np.zeros((WINDOW_SIZE, len(feature_cols)), dtype=np.float32)
@@ -320,7 +282,7 @@ async def get_portfolio_risk_ai(
 
     print(total_values)
     if not total_values or np.all(portfolio_sequence == 0):
-        raise HTTPException(status_code=400, detail=f"Brak danych historycznych do analizy portfela {portfolio_id}.")
+        raise HTTPException(status_code=400, detail=f"No historical data for portfolio: {portfolio_id}.")
 
     portfolio_sequence /= sum(total_values)
 
@@ -330,7 +292,7 @@ async def get_portfolio_risk_ai(
 
     probs = risk_model.predict(scaled).flatten().tolist()
     pred_raw = int(np.argmax(probs))
-    labels = ["niski", "średni", "wysoki"]
+    labels = ["Low", "Medium", "High"]
 
     return PortfolioRiskResponse(
         portfolio_id=portfolio_id,

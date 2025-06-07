@@ -96,21 +96,6 @@ const PortfolioRisk = forwardRef((props, ref) => {
                 <div className="mb-4 space-y-1 text-gray-200">
                   <p>Risk Category: {a.data.risk_category}</p>
                   <p>Prediction: {a.data.risk_prediction.toFixed(4)}</p>
-                  <button
-                    onClick={() => toggle(a.id)}
-                    className="
-                      inline-flex items-center justify-center
-                      text-xs font-semibold
-                      bg-primary text-white
-                      px-3 py-1
-                      rounded-full
-                      hover:bg-primary-light
-                      focus:outline-none focus:ring-2 focus:ring-primary/50
-                      transition
-                    "
-                  >
-                    {expanded[a.id] ? 'Hide details' : 'Show more'}
-                  </button>
                 </div>
               )}
               {expanded[a.id] && a.mode === 'Classical' && (() => {

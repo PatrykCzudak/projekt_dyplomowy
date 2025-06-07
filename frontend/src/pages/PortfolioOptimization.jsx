@@ -253,7 +253,7 @@ export default function PortfolioOptimization() {
       )}
 
       {/* Predicted Returns */}
-      {muValues && (
+      {(muValues && method === 'ai') && (
         <div className="bg-gray-900 p-4 rounded">
           <h2 className="text-lg font-medium text-gray-200 mb-2">
             Predicted Returns (μ)

@@ -24,38 +24,3 @@ def create_asset(asset: AssetCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_asset)
     return new_asset
-
-
-@router.get("/assets/{symbol}/history")
-def get_asset_history(symbol: str, period: str = "1mo"):
-    try:
-        ticker = yf.Ticker(symbol)
-        hist = ticker.history(period=period)
-        if hist.empty:
-            raise ValueError("Brak danych")
-
-        prices = {
-            str(date.date()): float(price)
-            for date, price in hist["Close"].items()
-        }
-
-        data = []
-        for date, row in hist.iterrows():
-            data.append({
-                "x": date.strftime('%Y-%m-%d'),
-                "y": [  # OHLC
-                    round(row["Open"], 2),
-                    round(row["High"], 2),
-                    round(row["Low"], 2),
-                    round(row["Close"], 2)
-                ]
-            })
-        
-        return {
-            "symbol": symbol.upper(),
-            "historical_prices": prices,
-            "ohlc": data
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Nie znaleziono danych: {e}")

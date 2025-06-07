@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
-import Portfolio from './pages/Portfolio';
 import PortfolioManagement from './pages/PortfolioManagement';
 import Transactions from './pages/Transactions';
 import Prices from './pages/Prices';
@@ -16,7 +15,6 @@ function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Navigate to="/portfolio" replace />} />
-          {/*<Route path="portfolio" element={<Portfolio />} />*/}
           <Route path="portfolio" element={<PortfolioManagement />} />
           <Route path="transactions" element={<Transactions />} />
           <Route path="chart" element={<HistoricalChart />} />

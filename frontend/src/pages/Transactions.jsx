@@ -13,7 +13,7 @@ export default function Transactions() {
     setLoadingTxs(true);
     api.get('/transactions/')
       .then(res => setTransactions(res.data))
-      .catch(() => showToast('Nie udało się załadować historii transakcji', 'error'))
+      .catch(() => showToast('Failed to load transaction history.', 'error'))
       .finally(() => setLoadingTxs(false));
   };
 
@@ -77,7 +77,7 @@ export default function Transactions() {
                 : (
                   <tr>
                     <td colSpan="6" className="py-4 px-4 text-center text-gray-500">
-                      Brak transakcji.
+                      No Transactions.
                     </td>
                   </tr>
                 )

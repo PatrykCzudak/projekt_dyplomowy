@@ -9,10 +9,10 @@ from sqlalchemy import case, func
 
 def markowitz_optimize(db: Session, gamma: float, period: str = '5y') -> Dict[str, float]:
     """
-    Optymalizacja portfela metodą Markowitza:
-    - Używa tylko aktywów, które mają net_qty > 0 (z bazy).
-    - Pozwala określić okres historyczny (np. '1y', '5y').
-    - Zawiera ograniczenie dywersyfikacji: min udział aktywa = 1%.
+    Portfolio optimization using the Markowitz method:
+    - Only uses assets that have net_qty > 0 (from the database).
+    - Allows specifying the historical period (e.g., '1y', '5y').
+    - Includes a diversification constraint: minimum asset weight = 1%.
     """
     qty_case = case(
         (models.Transaction.type == "BUY",  models.Transaction.quantity),
@@ -32,7 +32,7 @@ def markowitz_optimize(db: Session, gamma: float, period: str = '5y') -> Dict[st
 
     symbols = [row.symbol for row in rows]
     if not symbols:
-        raise ValueError("Brak aktywnych pozycji w portfelu")
+        raise ValueError("No active positions in the portfolio.")
 
     returns_list = []
     for sym in symbols:
@@ -45,8 +45,6 @@ def markowitz_optimize(db: Session, gamma: float, period: str = '5y') -> Dict[st
 
     mu = returns_df.mean().values
     Sigma = returns_df.cov().values
-    print(f"[DEBUG] mu: {mu}")
-    print(f"[DEBUG] Sigma:\n{Sigma}")
 
     n = len(mu)
     w = Variable(n)
@@ -57,7 +55,7 @@ def markowitz_optimize(db: Session, gamma: float, period: str = '5y') -> Dict[st
 
     prob.solve(solver=OSQP)
     if prob.status not in ["optimal", "optimal_inaccurate"]:
-        raise RuntimeError(f"Solver zwrócił status {prob.status}")
+        raise RuntimeError(f"Solver returns staus: {prob.status}")
 
     return dict(zip(returns_df.columns.tolist(), w.value.tolist()))
 
@@ -67,7 +65,7 @@ def portfolio_cloud(
     period: str = '5y'
 ) -> List[Dict[str, float]]:
     """
-    Generuje chmurę portfeli z losowymi wagami.
+    Generates a cloud of portfolios with random weights.
     """
     qty_case = case(
         (models.Transaction.type == "BUY", models.Transaction.quantity),
@@ -121,7 +119,7 @@ def portfolio_cloud(
 
 def efficient_frontier(db: Session, num_points: int = 50, gamma_min: float = 0.0, gamma_max: float = 10.0, period: str = '5y') -> List[Dict[str, float]]:
     """
-    Generuje punkty na efektywnej granicy ryzyka i zwrotu.
+    Generates points on the efficient frontier of risk and return.
     """
     qty_case = case(
         (models.Transaction.type == "BUY",  models.Transaction.quantity),
@@ -141,7 +139,7 @@ def efficient_frontier(db: Session, num_points: int = 50, gamma_min: float = 0.0
 
     symbols = [row.symbol for row in rows]
     if not symbols:
-        raise ValueError("Brak aktywnych pozycji w portfelu")
+        raise ValueError("No active positions in the portfolio.")
 
     returns_list = []
     for sym in symbols:
@@ -153,8 +151,6 @@ def efficient_frontier(db: Session, num_points: int = 50, gamma_min: float = 0.0
     returns_df = pd.concat(returns_list, axis=1)
     mu = returns_df.mean().values
     Sigma = returns_df.cov().values
-    print(f"[DEBUG] mu: {mu}")
-    print(f"[DEBUG] Sigma:\n{Sigma}")
 
     n = len(mu)
     gammas = np.linspace(gamma_min, gamma_max, num_points)

@@ -72,11 +72,11 @@ export default function TransactionForm({ defaultSymbol = '', onTransactionAdded
   return (
     <div className="bg-surface rounded-lg shadow-lg p-6">
       <h2 className="text-xl font-semibold mb-4">Add New Transaction</h2>
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Asset */}
         <div className="flex flex-col">
-          <label className="text-sm text-gray-700 mb-1">Asset</label>
-          <div className="w-64">
+          <label className="flex text-sm text-gray-700 mb-1">Asset</label>
+          <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg">
             <TickerSelect
               value={tickerOptions.find(opt => opt.value === setAsset)}
               onChange={handleTickerChange}

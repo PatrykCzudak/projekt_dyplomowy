@@ -2,7 +2,7 @@ import time
 import sqlalchemy
 from sqlalchemy.exc import OperationalError
 from app.db.database import engine, Base
-from app.models import models  # <-- Ważne, żeby modele zostały zaimportowane
+from app.models import models
 
 def table_exists(table_name):
     inspector = sqlalchemy.inspect(engine)
@@ -12,21 +12,20 @@ def init():
     retries = 10
     while retries > 0:
         try:
-            print("Sprawdzam połączenie z bazą danych...")
-            # próba inspekcji (czy baza gotowa)
+            print("Checking the database connection....")
             if table_exists("assets"):
-                print("Usuwam istniejące tabele...")
+                print("Removing existing tables...")
                 Base.metadata.drop_all(bind=engine)
-            print("Tworzę nowe tabele...")
+            print("Creating new tables...")
             Base.metadata.create_all(bind=engine)
-            print("Baza danych została odświeżona.")
+            print("The database has been refreshed.")
             break
         except OperationalError as e:
-            print(f"Baza jeszcze się nie uruchomiła, ponawiam... ({10 - retries + 1})")
+            print(f"The database has not yet started, retrying... ({10 - retries + 1})")
             time.sleep(2)
             retries -= 1
     else:
-        print("Nie udało się połączyć z bazą danych.")
+        print("Failed to connect to the database.")
         raise RuntimeError("Could not connect to database after retries.")
 
 if __name__ == "__main__":
